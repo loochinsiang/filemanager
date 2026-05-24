@@ -288,8 +288,12 @@ object SvgConverter {
                 val token = commandGroup.trim()
                 if (token.isEmpty()) continue
                 val action = token[0]
-                val nums = token.substring(1).trim().split(Regex("[\\s,]+"))
-                    .mapNotNull { it.toFloatOrNull() }
+                
+                // Regex matches standard decimal / scientific numbers, correctly isolating leading sign flags (e.g., negative coefficients)
+                val numbersRegex = Regex("[-+]?[0-9]*\\.?[0-9]+(?:[eE][-+]?[0-9]+)?")
+                val nums = numbersRegex.findAll(token.substring(1))
+                    .mapNotNull { it.value.toFloatOrNull() }
+                    .toList()
 
                 when (action) {
                     'M' -> {

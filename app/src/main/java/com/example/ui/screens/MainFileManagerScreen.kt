@@ -1,13 +1,17 @@
 package com.example.ui.screens
 
+import android.os.StatFs
 import androidx.compose.animation.*
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -16,10 +20,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -28,25 +34,25 @@ import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.rememberScrollState
-import android.os.StatFs
+
+enum class MainTab {
+    FILES, RECENT, TOOLS, SETTINGS
+}
 
 @OptIn(ExperimentalAnimationApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun MainFileManagerScreen(
-    sandboxRoot: File,
     phoneRoot: File,
     hasStoragePermission: Boolean,
     onRequestStoragePermission: () -> Unit,
     onOpenFile: (File, String) -> Unit, // file and "editor" | "zip" | "image" | "sound" | "hex"
     modifier: Modifier = Modifier
 ) {
-    var isBrowsingPhoneStorage by remember { mutableStateOf(false) }
-    var currentDirectory by remember { mutableStateOf(sandboxRoot) }
+    var activeTab by remember { mutableStateOf(MainTab.FILES) }
+    var currentDirectory by remember { mutableStateOf(phoneRoot) }
     var showPermissionExplainer by remember { mutableStateOf(false) }
     
-    val activeRoot = if (isBrowsingPhoneStorage && hasStoragePermission) phoneRoot else sandboxRoot
+    val activeRoot = phoneRoot
 
     var fileList by remember { mutableStateOf<List<File>>(emptyList()) }
     var searchQuery by remember { mutableStateOf("") }
@@ -62,10 +68,16 @@ fun MainFileManagerScreen(
     var showDeleteConfirmDialog by remember { mutableStateOf<File?>(null) }
     var showDetailsDialog by remember { mutableStateOf<File?>(null) }
 
+    val context = LocalContext.current
+
     // Read files directory list
     val refreshFilesList = {
         val files = try {
-            currentDirectory.listFiles()?.toList() ?: emptyList()
+            if (hasStoragePermission) {
+                currentDirectory.listFiles()?.toList() ?: emptyList()
+            } else {
+                emptyList()
+            }
         } catch (_: Exception) {
             emptyList()
         }
@@ -73,30 +85,19 @@ fun MainFileManagerScreen(
         fileList = files.sortedWith(compareBy({ !it.isDirectory }, { it.name.lowercase(Locale.ROOT) }))
     }
 
-    LaunchedEffect(isBrowsingPhoneStorage, hasStoragePermission) {
-        if (isBrowsingPhoneStorage) {
-            if (hasStoragePermission) {
-                if (!currentDirectory.absolutePath.startsWith(phoneRoot.absolutePath)) {
-                    currentDirectory = phoneRoot
-                }
-            } else {
-                currentDirectory = sandboxRoot
-                isBrowsingPhoneStorage = false
-            }
-        } else {
-            if (!currentDirectory.absolutePath.startsWith(sandboxRoot.absolutePath)) {
-                currentDirectory = sandboxRoot
-            }
+    LaunchedEffect(hasStoragePermission) {
+        if (hasStoragePermission && currentDirectory.absolutePath != phoneRoot.absolutePath) {
+            currentDirectory = phoneRoot
         }
     }
 
-    LaunchedEffect(currentDirectory) {
+    LaunchedEffect(hasStoragePermission, currentDirectory) {
         refreshFilesList()
     }
 
     // Storage estimation metrics
-    val storageMetrics = remember(fileList, currentDirectory, isBrowsingPhoneStorage, hasStoragePermission) {
-        if (isBrowsingPhoneStorage && hasStoragePermission) {
+    val storageMetrics = remember(hasStoragePermission, fileList, currentDirectory) {
+        if (hasStoragePermission) {
             try {
                 val stat = StatFs(phoneRoot.path)
                 val blockSize = stat.blockSizeLong
@@ -113,21 +114,10 @@ fun MainFileManagerScreen(
                 val ratio = (gbUsed / gbTotal).coerceIn(0.01, 1.0)
                 Pair(String.format(Locale.ROOT, "%.1f GB of %.1f GB", gbUsed, gbTotal), ratio.toFloat())
             } catch (_: Exception) {
-                Pair("Phone Storage Available", 0.5f)
+                Pair("Phone Storage Enabled", 0.5f)
             }
         } else {
-            var usedSpace: Long = 0
-            fun accum(f: File) {
-                try {
-                    if (f.isFile) usedSpace += f.length()
-                    else f.listFiles()?.forEach { accum(it) }
-                } catch (_: Exception) {}
-            }
-            accum(sandboxRoot)
-            val mbUsed = usedSpace.toDouble() / (1024 * 1024)
-            val limitMb = 12.0 // simulate sandboxed quota
-            val ratio = (mbUsed / limitMb).coerceIn(0.01, 1.0)
-            Pair(String.format(Locale.ROOT, "%.1f MB of %.1f MB", mbUsed, limitMb), ratio.toFloat())
+            Pair("Permission Access Denied", 0f)
         }
     }
 
@@ -136,7 +126,7 @@ fun MainFileManagerScreen(
         fileList.filter { file ->
             val matchesSearch = file.name.contains(searchQuery, ignoreCase = true)
             val matchesChip = when (selectedFilter) {
-                "Source" -> !file.isDirectory && file.extension.lowercase(Locale.ROOT) in listOf("kt", "kts", "java", "js", "py", "css", "xml", "json", "md", "txt")
+                "Source" -> !file.isDirectory && file.extension.lowercase(Locale.ROOT) in listOf("kt", "kts", "java", "js", "py", "css", "xml", "json", "md", "txt", "svg")
                 "Media" -> !file.isDirectory && file.extension.lowercase(Locale.ROOT) in listOf("mp3", "wav", "m4a", "ogg")
                 "Archives" -> !file.isDirectory && file.extension.lowercase(Locale.ROOT) == "zip"
                 "Images" -> !file.isDirectory && file.extension.lowercase(Locale.ROOT) in listOf("png", "jpg", "jpeg", "svg")
@@ -148,204 +138,244 @@ fun MainFileManagerScreen(
 
     Scaffold(
         topBar = {
-            Column(
-                modifier = Modifier
-                    .background(SleekBg)
-                    .padding(top = 16.dp)
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 24.dp, vertical = 12.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column {
-                        Text(
-                            text = "Files",
-                            style = MaterialTheme.typography.headlineMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = SleekTextMain,
-                            letterSpacing = (-0.5).sp
-                        )
+            when (activeTab) {
+                MainTab.FILES -> {
+                    Column(
+                        modifier = Modifier
+                            .background(SleekBg)
+                            .padding(top = 16.dp)
+                    ) {
                         Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp),
-                            modifier = Modifier.padding(top = 6.dp)
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 24.dp, vertical = 12.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            // Sandbox Mode Selector
-                            Box(
-                                modifier = Modifier
-                                    .background(
-                                        color = if (!isBrowsingPhoneStorage) SleekFolderBg else SleekOtherBg,
-                                        shape = RoundedCornerShape(12.dp)
-                                    )
-                                    .clickable { isBrowsingPhoneStorage = false }
-                                    .padding(horizontal = 10.dp, vertical = 5.dp)
-                            ) {
+                            Column {
                                 Text(
-                                    text = "Sandbox Environment",
-                                    fontSize = 11.sp,
+                                    text = "Explorer",
+                                    style = MaterialTheme.typography.headlineMedium,
                                     fontWeight = FontWeight.Bold,
-                                    color = if (!isBrowsingPhoneStorage) SleekFolderText else SleekTextAlt
+                                    color = SleekTextMain,
+                                    letterSpacing = (-0.5).sp
+                                )
+                                Text(
+                                    text = if (!hasStoragePermission) "Access Required" else "In: " + (if (currentDirectory.absolutePath == activeRoot.absolutePath) "root" else currentDirectory.name),
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = SleekTextSub,
+                                    modifier = Modifier.padding(top = 4.dp)
                                 )
                             }
                             
-                            // Phone Storage Mode Selector
-                            Box(
-                                modifier = Modifier
-                                    .background(
-                                        color = if (isBrowsingPhoneStorage) SleekFolderBg else SleekOtherBg,
-                                        shape = RoundedCornerShape(12.dp)
-                                    )
-                                    .clickable {
-                                        if (!hasStoragePermission) {
-                                            showPermissionExplainer = true
-                                        } else {
-                                            isBrowsingPhoneStorage = true
-                                        }
+                            if (hasStoragePermission) {
+                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    IconButton(
+                                        onClick = { showCreateDirDialog = true },
+                                        colors = IconButtonDefaults.iconButtonColors(containerColor = SleekFolderBg),
+                                        modifier = Modifier.testTag("create_folder_button")
+                                    ) {
+                                        Icon(Icons.Default.CreateNewFolder, contentDescription = "New Directory", tint = SleekFolderText)
                                     }
-                                    .padding(horizontal = 10.dp, vertical = 5.dp)
-                            ) {
-                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                    Icon(
-                                        imageVector = Icons.Default.PhoneAndroid,
-                                        contentDescription = null,
-                                        tint = if (isBrowsingPhoneStorage) SleekFolderText else SleekTextAlt,
-                                        modifier = Modifier.size(12.dp)
-                                    )
-                                    Text(
-                                        text = "Phone Files",
-                                        fontSize = 11.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = if (isBrowsingPhoneStorage) SleekFolderText else SleekTextAlt
-                                    )
+                                    IconButton(
+                                        onClick = { showCreateFileDialog = true },
+                                        colors = IconButtonDefaults.iconButtonColors(containerColor = SleekCodeBg),
+                                        modifier = Modifier.testTag("create_file_button")
+                                    ) {
+                                        Icon(Icons.Default.NoteAdd, contentDescription = "New Source File", tint = SleekCodeText)
+                                    }
                                 }
                             }
                         }
-                        
-                        Text(
-                            text = "Active: " + (if (currentDirectory.absolutePath == activeRoot.absolutePath) "root" else currentDirectory.name),
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = SleekTextSub,
-                            modifier = Modifier.padding(top = 4.dp)
-                        )
-                    }
 
-                    // Top quick file creators
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        IconButton(
-                            onClick = { showCreateDirDialog = true },
-                            colors = IconButtonDefaults.iconButtonColors(containerColor = SleekFolderBg),
-                            modifier = Modifier.testTag("create_folder_button")
-                        ) {
-                            Icon(Icons.Default.CreateNewFolder, contentDescription = "New Directory", tint = SleekFolderText)
-                        }
-                        IconButton(
-                            onClick = { showCreateFileDialog = true },
-                            colors = IconButtonDefaults.iconButtonColors(containerColor = SleekCodeBg),
-                            modifier = Modifier.testTag("create_file_button")
-                        ) {
-                            Icon(Icons.Default.NoteAdd, contentDescription = "New Source File", tint = SleekCodeText)
+                        if (hasStoragePermission) {
+                            BreadcrumbsRow(
+                                root = activeRoot,
+                                current = currentDirectory,
+                                onBreadcrumbClick = { currentDirectory = it }
+                            )
                         }
                     }
                 }
+                MainTab.RECENT -> {
+                    Column(
+                        modifier = Modifier
+                            .background(SleekBg)
+                            .padding(top = 16.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 24.dp, vertical = 20.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column {
+                                Text(
+                                    text = "Recent History",
+                                    style = MaterialTheme.typography.headlineMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = SleekTextMain,
+                                    letterSpacing = (-0.5).sp
+                                )
+                                Text(
+                                    text = "Recently opened file elements",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = SleekTextSub,
+                                    modifier = Modifier.padding(top = 4.dp)
+                                )
+                            }
 
-                // Breadcrumbs navigation row
-                BreadcrumbsRow(
-                    root = activeRoot,
-                    current = currentDirectory,
-                    onBreadcrumbClick = { currentDirectory = it }
-                )
+                            IconButton(
+                                onClick = {
+                                    val prefs = context.getSharedPreferences("app_prefs", android.content.Context.MODE_PRIVATE)
+                                    prefs.edit().putString("recent_files", "").apply()
+                                },
+                                colors = IconButtonDefaults.iconButtonColors(containerColor = SleekOtherBg)
+                            ) {
+                                Icon(Icons.Default.DeleteSweep, contentDescription = "Clear History", tint = SleekTextAlt)
+                            }
+                        }
+                    }
+                }
+                MainTab.TOOLS -> {
+                    Column(
+                        modifier = Modifier
+                            .background(SleekBg)
+                            .padding(top = 16.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 24.dp, vertical = 20.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column {
+                                Text(
+                                    text = "Studio Tools",
+                                    style = MaterialTheme.typography.headlineMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = SleekTextMain,
+                                    letterSpacing = (-0.5).sp
+                                )
+                                Text(
+                                    text = "Advanced integrated diagnostics utilities",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = SleekTextSub,
+                                    modifier = Modifier.padding(top = 4.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+                MainTab.SETTINGS -> {
+                    Column(
+                        modifier = Modifier
+                            .background(SleekBg)
+                            .padding(top = 16.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 24.dp, vertical = 20.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column {
+                                Text(
+                                    text = "Settings",
+                                    style = MaterialTheme.typography.headlineMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = SleekTextMain,
+                                    letterSpacing = (-0.5).sp
+                                )
+                                Text(
+                                    text = "Properties, permissions, and app reset",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = SleekTextSub,
+                                    modifier = Modifier.padding(top = 4.dp)
+                                )
+                            }
+                        }
+                    }
+                }
             }
         },
         bottomBar = {
             NavigationBar(
                 containerColor = SleekBottomNavBg,
-                tonalElevation = 0.dp,
-                modifier = Modifier
-                    .height(80.dp)
-                    .windowInsetsPadding(WindowInsets.navigationBars)
+                tonalElevation = 0.dp
             ) {
                 // Files Tab
                 NavigationBarItem(
-                    selected = true,
-                    onClick = { /* Stay on files */ },
+                    selected = activeTab == MainTab.FILES,
+                    onClick = { activeTab = MainTab.FILES },
                     icon = {
-                        Box(
-                            modifier = Modifier
-                                .width(64.dp)
-                                .height(32.dp)
-                                .background(SleekFolderBg, shape = RoundedCornerShape(16.dp)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Folder,
-                                contentDescription = "Files",
-                                tint = SleekFolderText
-                            )
-                        }
+                        Icon(
+                            imageVector = Icons.Default.Folder,
+                            contentDescription = "Files",
+                            tint = if (activeTab == MainTab.FILES) SleekFolderText else SleekTextAlt.copy(alpha = 0.6f)
+                        )
                     },
-                    label = { Text("Files", fontWeight = FontWeight.Bold, color = SleekFolderText) }
+                    label = { Text("Files", fontWeight = FontWeight.Bold, color = if (activeTab == MainTab.FILES) SleekFolderText else SleekTextAlt.copy(alpha = 0.6f)) }
                 )
 
                 // Recent Tab
                 NavigationBarItem(
-                    selected = false,
-                    onClick = { /* Decorative only */ },
+                    selected = activeTab == MainTab.RECENT,
+                    onClick = { activeTab = MainTab.RECENT },
                     icon = {
                         Icon(
                             imageVector = Icons.Default.History,
                             contentDescription = "Recent",
-                            tint = SleekTextAlt.copy(alpha = 0.6f)
+                            tint = if (activeTab == MainTab.RECENT) SleekFolderText else SleekTextAlt.copy(alpha = 0.6f)
                         )
                     },
-                    label = { Text("Recent", color = SleekTextAlt.copy(alpha = 0.6f)) }
+                    label = { Text("Recent", fontWeight = FontWeight.Bold, color = if (activeTab == MainTab.RECENT) SleekFolderText else SleekTextAlt.copy(alpha = 0.6f)) }
                 )
 
                 // Tools Tab
                 NavigationBarItem(
-                    selected = false,
-                    onClick = { /* Decorative only */ },
+                    selected = activeTab == MainTab.TOOLS,
+                    onClick = { activeTab = MainTab.TOOLS },
                     icon = {
                         Icon(
                             imageVector = Icons.Default.AutoAwesome,
                             contentDescription = "Tools",
-                            tint = SleekTextAlt.copy(alpha = 0.6f)
+                            tint = if (activeTab == MainTab.TOOLS) SleekFolderText else SleekTextAlt.copy(alpha = 0.6f)
                         )
                     },
-                    label = { Text("Tools", color = SleekTextAlt.copy(alpha = 0.6f)) }
+                    label = { Text("Tools", fontWeight = FontWeight.Bold, color = if (activeTab == MainTab.TOOLS) SleekFolderText else SleekTextAlt.copy(alpha = 0.6f)) }
                 )
 
                 // Settings Tab
                 NavigationBarItem(
-                    selected = false,
-                    onClick = { /* Decorative only */ },
+                    selected = activeTab == MainTab.SETTINGS,
+                    onClick = { activeTab = MainTab.SETTINGS },
                     icon = {
                         Icon(
                             imageVector = Icons.Default.Settings,
                             contentDescription = "Settings",
-                            tint = SleekTextAlt.copy(alpha = 0.6f)
+                            tint = if (activeTab == MainTab.SETTINGS) SleekFolderText else SleekTextAlt.copy(alpha = 0.6f)
                         )
                     },
-                    label = { Text("Settings", color = SleekTextAlt.copy(alpha = 0.6f)) }
+                    label = { Text("Settings", fontWeight = FontWeight.Bold, color = if (activeTab == MainTab.SETTINGS) SleekFolderText else SleekTextAlt.copy(alpha = 0.6f)) }
                 )
             }
         },
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = { showCreateFileDialog = true },
-                containerColor = SleekFolderBg,
-                contentColor = SleekFolderText,
-                shape = RoundedCornerShape(16.dp),
-                modifier = Modifier.testTag("floating_add_button")
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = "Create Item",
-                    modifier = Modifier.size(24.dp)
-                )
+            if (activeTab == MainTab.FILES && hasStoragePermission) {
+                FloatingActionButton(
+                    onClick = { showCreateFileDialog = true },
+                    containerColor = SleekFolderBg,
+                    contentColor = SleekFolderText,
+                    modifier = Modifier.testTag("floating_add_button")
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = "Add Item")
+                }
             }
         },
         modifier = modifier.fillMaxSize()
@@ -356,162 +386,254 @@ fun MainFileManagerScreen(
                 .fillMaxSize()
                 .background(SleekBg)
         ) {
-            // Search and Filter Bar Layout
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                // Search TextField
-                OutlinedTextField(
-                    value = searchQuery,
-                    onValueChange = { searchQuery = it },
-                    placeholder = { Text("Search files & archives...", color = SleekTextSub) },
-                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = SleekTextAlt) },
-                    trailingIcon = {
-                        if (searchQuery.isNotEmpty()) {
-                            IconButton(onClick = { searchQuery = "" }) {
-                                Icon(Icons.Default.Close, contentDescription = "Clear Seek", tint = SleekTextAlt)
-                            }
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth().testTag("search_field"),
-                    shape = RoundedCornerShape(20.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = Color.White,
-                        unfocusedContainerColor = Color.White,
-                        focusedBorderColor = SleekFolderBg,
-                        unfocusedBorderColor = SleekBorderLight,
-                        focusedTextColor = SleekTextMain,
-                        unfocusedTextColor = SleekTextMain
-                    ),
-                    singleLine = true
-                )
-
-                // Category Filter Chips Row (No nested horizontal structures, simple custom components)
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    val filters = listOf("All", "Source", "Media", "Archives", "Images")
-                    filters.forEach { filterName ->
-                        val selected = selectedFilter == filterName
-                        FilterChip(
-                            selected = selected,
-                            onClick = { selectedFilter = filterName },
-                            label = { Text(filterName, fontSize = 12.sp, fontWeight = FontWeight.Bold) },
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = SleekFolderBg,
-                                selectedLabelColor = SleekFolderText,
-                                containerColor = Color.White,
-                                labelColor = SleekTextAlt
-                            ),
-                            border = FilterChipDefaults.filterChipBorder(
-                                enabled = true,
-                                selected = selected,
-                                borderColor = if (selected) SleekFolderBg else SleekBorderLight,
-                                selectedBorderColor = SleekFolderBg
-                            )
-                        )
-                    }
-                }
-
-                // Storage card positioned safely inside top dashboard to avoid floating overlaps
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 4.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, SleekBorderLight)
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .padding(12.dp)
-                            .fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(
+            when (activeTab) {
+                MainTab.FILES -> {
+                    if (!hasStoragePermission) {
+                        Column(
                             modifier = Modifier
-                                .size(36.dp)
-                                .background(SleekFolderBg, shape = RoundedCornerShape(8.dp)),
-                            contentAlignment = Alignment.Center
+                                .fillMaxSize()
+                                .padding(24.dp),
+                            verticalArrangement = Arrangement.Center,
+                            horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            Icon(Icons.Default.SdStorage, contentDescription = null, tint = SleekFolderText, modifier = Modifier.size(18.dp))
-                        }
-                        Spacer(Modifier.width(12.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                Text(
-                                    text = if (isBrowsingPhoneStorage) "Active Device Storage" else "Storage Metrics Limit", 
-                                    style = MaterialTheme.typography.labelSmall, 
-                                    color = SleekTextSub, 
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Text(storageMetrics.first, style = MaterialTheme.typography.labelSmall, color = SleekFolderText, fontWeight = FontWeight.Bold)
-                            }
-                            Spacer(Modifier.height(6.dp))
-                            LinearProgressIndicator(
-                                progress = { storageMetrics.second },
-                                modifier = Modifier.fillMaxWidth().height(4.dp),
-                                color = SleekFolderText,
-                                trackColor = SleekOtherBg
+                            Icon(
+                                imageVector = Icons.Default.SdStorage,
+                                contentDescription = null,
+                                modifier = Modifier.size(72.dp),
+                                tint = SleekFolderText.copy(alpha = 0.5f)
                             )
+                            Spacer(Modifier.height(16.dp))
+                            Text(
+                                "Phone Storage Required",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 18.sp,
+                                color = SleekTextMain
+                            )
+                            Spacer(Modifier.height(8.dp))
+                            Text(
+                                "This tab accesses your phone's external files directory. Please configure developer storage permission to proceed.",
+                                fontSize = 13.sp,
+                                color = SleekTextSub,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.padding(horizontal = 16.dp)
+                            )
+                            Spacer(Modifier.height(24.dp))
+                            Button(
+                                onClick = { showPermissionExplainer = true },
+                                colors = ButtonDefaults.buttonColors(containerColor = SleekFolderBg, contentColor = SleekFolderText)
+                            ) {
+                                Text("Configure Permission", fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    } else {
+                        Column(modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
+                            OutlinedTextField(
+                                value = searchQuery,
+                                onValueChange = { searchQuery = it },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 4.dp)
+                                    .testTag("search_files_input"),
+                                placeholder = { Text("Search files & archives ...", color = SleekTextSub) },
+                                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = SleekTextSub) },
+                                trailingIcon = {
+                                    if (searchQuery.isNotEmpty()) {
+                                        IconButton(onClick = { searchQuery = "" }) {
+                                            Icon(Icons.Default.Clear, contentDescription = "Clear Search", tint = SleekTextSub)
+                                        }
+                                    }
+                                },
+                                singleLine = true,
+                                shape = RoundedCornerShape(16.dp),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedContainerColor = Color.White,
+                                    unfocusedContainerColor = Color.White,
+                                    focusedBorderColor = SleekBorderLight,
+                                    unfocusedBorderColor = SleekBorderLight
+                                )
+                            )
+
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 6.dp)
+                                    .horizontalScroll(rememberScrollState()),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                listOf("All", "Source", "Media", "Archives", "Images").forEach { filterName ->
+                                    val selected = selectedFilter == filterName
+                                    FilterChip(
+                                        selected = selected,
+                                        onClick = { selectedFilter = filterName },
+                                        label = {
+                                            Text(
+                                                text = filterName,
+                                                fontSize = 12.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                maxLines = 1,
+                                                softWrap = false
+                                            )
+                                        },
+                                        colors = FilterChipDefaults.filterChipColors(
+                                            selectedContainerColor = SleekFolderBg,
+                                            selectedLabelColor = SleekFolderText,
+                                            containerColor = Color.White,
+                                            labelColor = SleekTextAlt
+                                        ),
+                                        border = FilterChipDefaults.filterChipBorder(
+                                            enabled = true,
+                                            selected = selected,
+                                            borderColor = if (selected) SleekFolderBg else SleekBorderLight,
+                                            selectedBorderColor = SleekFolderBg
+                                        )
+                                    )
+                                }
+                            }
+
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 4.dp),
+                                shape = RoundedCornerShape(16.dp),
+                                colors = CardDefaults.cardColors(containerColor = Color.White),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, SleekBorderLight)
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .padding(12.dp)
+                                        .fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(36.dp)
+                                            .background(SleekFolderBg, shape = RoundedCornerShape(8.dp)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(Icons.Default.SdStorage, contentDescription = null, tint = SleekFolderText, modifier = Modifier.size(18.dp))
+                                    }
+                                    Spacer(Modifier.width(12.dp))
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                            Text(
+                                                text = "Active Device Storage",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = SleekTextSub,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                            Text(storageMetrics.first, style = MaterialTheme.typography.labelSmall, color = SleekFolderText, fontWeight = FontWeight.Bold)
+                                        }
+                                        Spacer(Modifier.height(6.dp))
+                                        LinearProgressIndicator(
+                                            progress = { storageMetrics.second },
+                                            modifier = Modifier.fillMaxWidth().height(4.dp),
+                                            color = SleekFolderText,
+                                            trackColor = SleekOtherBg
+                                        )
+                                    }
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(6.dp))
+
+                            AnimatedContent(
+                                targetState = currentDirectory,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .weight(1f),
+                                transitionSpec = {
+                                    if (targetState.path.length > initialState.path.length) {
+                                        slideInHorizontally { width -> width / 3 } + fadeIn() togetherWith
+                                        slideOutHorizontally { width -> -width / 3 } + fadeOut()
+                                    } else {
+                                        slideInHorizontally { width -> -width / 3 } + fadeIn() togetherWith
+                                        slideOutHorizontally { width -> width / 3 } + fadeOut()
+                                    }
+                                },
+                                label = "directory_flip"
+                            ) { activeDir ->
+                                if (filteredFiles.isEmpty()) {
+                                    Column(
+                                        modifier = Modifier.fillMaxSize(),
+                                        verticalArrangement = Arrangement.Center,
+                                        horizontalAlignment = Alignment.CenterHorizontally
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.FolderOpen,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(72.dp),
+                                            tint = SleekTextSub.copy(alpha = 0.4f)
+                                        )
+                                        Spacer(Modifier.height(12.dp))
+                                        Text("No matching files found here", color = SleekTextSub, style = MaterialTheme.typography.bodyMedium)
+                                    }
+                                } else {
+                                    LazyColumn(
+                                        modifier = Modifier.fillMaxSize(),
+                                        contentPadding = PaddingValues(bottom = 80.dp),
+                                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        items(filteredFiles) { file ->
+                                            FileElementRow(
+                                                file = file,
+                                                onClick = {
+                                                    if (file.isDirectory) {
+                                                        currentDirectory = file
+                                                    } else {
+                                                        addRecentFile(context, file)
+                                                        val ext = file.extension.lowercase(Locale.ROOT)
+                                                        when {
+                                                            ext == "zip" -> onOpenFile(file, "zip")
+                                                            ext in listOf("png", "jpg", "jpeg") -> onOpenFile(file, "image")
+                                                            ext == "svg" -> onOpenFile(file, "editor")
+                                                            ext in listOf("wav", "mp3", "m4a") -> onOpenFile(file, "sound")
+                                                            ext == "bin" || ext == "hex" -> onOpenFile(file, "hex")
+                                                            else -> onOpenFile(file, "editor")
+                                                        }
+                                                    }
+                                                },
+                                                onOptions = {
+                                                    activeItemActions = file
+                                                }
+                                            )
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                 }
-            }
-
-            Spacer(modifier = Modifier.height(6.dp))
-
-            // Directional Sliding Directory Transition Anim
-            AnimatedContent(
-                targetState = currentDirectory,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f),
-                transitionSpec = {
-                    if (targetState.path.length > initialState.path.length) {
-                        slideInHorizontally { width -> width / 3 } + fadeIn() togetherWith
-                        slideOutHorizontally { width -> -width / 3 } + fadeOut()
+                MainTab.RECENT -> {
+                    val recentsList = remember(activeTab) { getRecentFiles(context) }
+                    
+                    if (recentsList.isEmpty()) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(24.dp),
+                            verticalArrangement = Arrangement.Center,
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.History,
+                                contentDescription = null,
+                                modifier = Modifier.size(80.dp),
+                                tint = SleekTextSub.copy(alpha = 0.5f)
+                            )
+                            Spacer(Modifier.height(16.dp))
+                            Text("No Recent History", fontWeight = FontWeight.Bold, color = SleekTextMain)
+                            Text("Files you open or view will appear here for fast access.", color = SleekTextSub, fontSize = 13.sp, modifier = Modifier.padding(top = 4.dp))
+                        }
                     } else {
-                        slideInHorizontally { width -> -width / 3 } + fadeIn() togetherWith
-                        slideOutHorizontally { width -> width / 3 } + fadeOut()
-                    }
-                },
-                label = "directory_flip"
-            ) { activeDir ->
-                if (filteredFiles.isEmpty()) {
-                    Column(
-                        modifier = Modifier.fillMaxSize(),
-                        verticalArrangement = Arrangement.Center,
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.FolderOpen,
-                            contentDescription = null,
-                            modifier = Modifier.size(72.dp),
-                            tint = SleekTextSub.copy(alpha = 0.4f)
-                        )
-                        Spacer(Modifier.height(12.dp))
-                        Text("No matching files found here", color = SleekTextSub, style = MaterialTheme.typography.bodyMedium)
-                    }
-                } else {
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 80.dp),
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        items(filteredFiles) { file ->
-                            FileElementRow(
-                                file = file,
-                                onClick = {
-                                    if (file.isDirectory) {
-                                        currentDirectory = file
-                                    } else {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+                            contentPadding = PaddingValues(bottom = 80.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            items(recentsList) { file ->
+                                FileElementRow(
+                                    file = file,
+                                    onClick = {
                                         val ext = file.extension.lowercase(Locale.ROOT)
                                         when {
                                             ext == "zip" -> onOpenFile(file, "zip")
@@ -521,19 +643,130 @@ fun MainFileManagerScreen(
                                             ext == "bin" || ext == "hex" -> onOpenFile(file, "hex")
                                             else -> onOpenFile(file, "editor")
                                         }
+                                    },
+                                    onOptions = {
+                                        activeItemActions = file
                                     }
-                                },
-                                onOptions = {
-                                    activeItemActions = file
-                                }
-                            )
+                                )
+                            }
                         }
                     }
                 }
-            }
+                MainTab.TOOLS -> {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 24.dp)
+                            .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        Text("Active Core Suites", fontWeight = FontWeight.Bold, color = SleekTextMain, fontSize = 16.sp)
 
-            // Empty space block
-            Spacer(modifier = Modifier.height(4.dp))
+                        ToolLaunchCard(
+                            title = "Advanced Equalizer & Deck",
+                            desc = "Open Music Deck to change speed/pitch, utilize 5-band equalizer, and compute real-time BPM values.",
+                            icon = Icons.Default.LibraryMusic,
+                            iconColor = SleekAudioText,
+                            iconBg = SleekAudioBg,
+                            onClick = {
+                                selectedFilter = "Media"
+                                activeTab = MainTab.FILES
+                            }
+                        )
+
+                        ToolLaunchCard(
+                            title = "SVG Live rendering",
+                            desc = "Inspect raw SVG vector tags inside code view, auto-adjust dimensions, and translate to Vector XML.",
+                            icon = Icons.Default.Palette,
+                            iconColor = SleekImageText,
+                            iconBg = SleekImageBg,
+                            onClick = {
+                                selectedFilter = "Images"
+                                activeTab = MainTab.FILES
+                            }
+                        )
+
+                        ToolLaunchCard(
+                            title = "Zip Archive Packer / Extractor",
+                            desc = "Compress any directory into standard archives, inspect file headers, and extract data files safely.",
+                            icon = Icons.Default.FolderZip,
+                            iconColor = SleekZipText,
+                            iconBg = SleekZipBg,
+                            onClick = {
+                                selectedFilter = "Archives"
+                                activeTab = MainTab.FILES
+                            }
+                        )
+
+                        ToolLaunchCard(
+                            title = "Low-Level HEX Analyzer",
+                            desc = "Locate binary assets, scan byte-level properties, and duplicate resources on local storage.",
+                            icon = Icons.Default.Code,
+                            iconColor = SleekCodeText,
+                            iconBg = SleekCodeBg,
+                            onClick = {
+                                selectedFilter = "All"
+                                activeTab = MainTab.FILES
+                            }
+                        )
+
+                        Spacer(Modifier.height(40.dp))
+                    }
+                }
+                MainTab.SETTINGS -> {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 24.dp)
+                            .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        Text("App Properties", fontWeight = FontWeight.Bold, color = SleekTextMain, fontSize = 16.sp)
+
+                        Card(
+                            shape = RoundedCornerShape(16.dp),
+                            colors = CardDefaults.cardColors(containerColor = Color.White),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, SleekBorderLight),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+                                    Text("Application Label", color = SleekTextSub, fontSize = 13.sp)
+                                    Text("FileSmith Studio", color = SleekTextMain, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                                }
+                                HorizontalDivider(color = SleekBorderLight)
+                                Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+                                    Text("Software Version", color = SleekTextSub, fontSize = 13.sp)
+                                    Text("v1.3.1 - Expressive", color = SleekTextMain, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                                }
+                                HorizontalDivider(color = SleekBorderLight)
+                                Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+                                    Text("Dev Storage Access", color = SleekTextSub, fontSize = 13.sp)
+                                    Text(if (hasStoragePermission) "Granted (All-Access)" else "Denied", color = if (hasStoragePermission) SleekFolderText else Color.Red, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                                }
+                            }
+                        }
+
+                        Text("Performance & Cache Controls", fontWeight = FontWeight.Bold, color = SleekTextMain, fontSize = 16.sp)
+
+                        Button(
+                            onClick = {
+                                val prefs = context.getSharedPreferences("app_prefs", android.content.Context.MODE_PRIVATE)
+                                prefs.edit().clear().apply()
+                            },
+                            modifier = Modifier.fillMaxWidth().height(48.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFBA1A1A), contentColor = Color.White),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Icon(Icons.Default.Refresh, contentDescription = null)
+                            Spacer(Modifier.width(8.dp))
+                            Text("Reset App Preferences & Cache", fontWeight = FontWeight.Bold)
+                        }
+
+                        Spacer(Modifier.height(40.dp))
+                    }
+                }
+            }
         }
     }
 
@@ -658,7 +891,7 @@ fun MainFileManagerScreen(
                 OutlinedTextField(
                     value = newItemName,
                     onValueChange = { newItemName = it },
-                    placeholder = { Text("app_helper.kt / vector.svg ...", color = SleekTextSub) },
+                    placeholder = { Text("util.kt / vector.svg ...", color = SleekTextSub) },
                     singleLine = true,
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = SleekFolderText,
@@ -941,7 +1174,6 @@ fun FileElementRow(
             )
         }
 
-        // For code or edit files, render EDIT small tag to match Design HTML exactly!
         if (!file.isDirectory && ext in listOf("kt", "java", "js", "py", "svg")) {
             Box(
                 modifier = Modifier
@@ -962,4 +1194,61 @@ fun FileElementRow(
             Icon(Icons.Default.MoreVert, contentDescription = "Resource options", tint = SleekTextSub)
         }
     }
+}
+
+@Composable
+fun ToolLaunchCard(
+    title: String,
+    desc: String,
+    icon: ImageVector,
+    iconColor: Color,
+    iconBg: Color,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() },
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        border = androidx.compose.foundation.BorderStroke(1.dp, SleekBorderLight)
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .background(iconBg, shape = RoundedCornerShape(12.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(imageVector = icon, contentDescription = null, tint = iconColor, modifier = Modifier.size(22.dp))
+            }
+            Spacer(Modifier.width(16.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(text = title, fontWeight = FontWeight.Bold, color = SleekTextMain, fontSize = 14.sp)
+                Text(text = desc, color = SleekTextSub, fontSize = 11.sp, lineHeight = 14.sp, modifier = Modifier.padding(top = 2.dp))
+            }
+            Icon(Icons.Default.ChevronRight, contentDescription = null, tint = SleekTextSub)
+        }
+    }
+}
+
+// Helpers for recents tracking
+fun addRecentFile(context: android.content.Context, file: File) {
+    val prefs = context.getSharedPreferences("app_prefs", android.content.Context.MODE_PRIVATE)
+    val paths = prefs.getString("recent_files", "")?.split("|")?.filter { it.isNotEmpty() }?.toMutableList() ?: mutableListOf()
+    paths.remove(file.absolutePath)
+    paths.add(0, file.absolutePath)
+    if (paths.size > 15) {
+        paths.removeAt(paths.size - 1)
+    }
+    prefs.edit().putString("recent_files", paths.joinToString("|")).apply()
+}
+
+fun getRecentFiles(context: android.content.Context): List<File> {
+    val prefs = context.getSharedPreferences("app_prefs", android.content.Context.MODE_PRIVATE)
+    val paths = prefs.getString("recent_files", "")?.split("|")?.filter { it.isNotEmpty() } ?: emptyList()
+    return paths.map { File(it) }.filter { it.exists() }
 }

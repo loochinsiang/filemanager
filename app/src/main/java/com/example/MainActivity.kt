@@ -21,7 +21,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
 import com.example.ui.screens.*
 import com.example.ui.theme.MyApplicationTheme
-import com.example.utils.FileSandbox
 import java.io.File
 
 // Screen state flow router
@@ -44,13 +43,12 @@ class MainActivity : ComponentActivity() {
             MyApplicationTheme {
                 val context = LocalContext.current
                 
-                // Programmatically initialize sandbox assets
-                val sandboxRoot = remember {
-                    FileSandbox.setupSandbox(context)
-                }
-
                 val isPermissionGranted by hasStoragePermissionVal
                 var currentScreen by remember { mutableStateOf<ScreenState>(ScreenState.Main) }
+
+                // Track first-time Welcome screen dismiss state
+                val sharedPrefs = remember { context.getSharedPreferences("app_prefs", android.content.Context.MODE_PRIVATE) }
+                var showWelcomeScreen by remember { mutableStateOf(sharedPrefs.getBoolean("show_welcome", true)) }
 
                 // System back-button integrations
                 if (currentScreen != ScreenState.Main) {
@@ -60,19 +58,28 @@ class MainActivity : ComponentActivity() {
                 }
 
                 Box(modifier = Modifier.fillMaxSize()) {
-                    // Animated transition fade for full panels
-                    AnimatedContent(
-                        targetState = currentScreen,
-                        transitionSpec = {
-                            fadeIn() togetherWith fadeOut()
-                        },
-                        modifier = Modifier.fillMaxSize(),
-                        label = "panel_swap"
-                    ) { targetScreen ->
-                        when (targetScreen) {
-                            is ScreenState.Main -> {
-                                MainFileManagerScreen(
-                                    sandboxRoot = sandboxRoot,
+                    if (showWelcomeScreen) {
+                        WelcomeScreen(
+                            hasPermission = isPermissionGranted,
+                            onGrantPermission = { requestStorageAccess() },
+                            onDismiss = {
+                                sharedPrefs.edit().putBoolean("show_welcome", false).apply()
+                                showWelcomeScreen = false
+                            }
+                        )
+                    } else {
+                        // Animated transition fade for full panels
+                        AnimatedContent(
+                            targetState = currentScreen,
+                            transitionSpec = {
+                                fadeIn() togetherWith fadeOut()
+                            },
+                            modifier = Modifier.fillMaxSize(),
+                            label = "panel_swap"
+                        ) { targetScreen ->
+                            when (targetScreen) {
+                                is ScreenState.Main -> {
+                                    MainFileManagerScreen(
                                     phoneRoot = Environment.getExternalStorageDirectory(),
                                     hasStoragePermission = isPermissionGranted,
                                     onRequestStoragePermission = { requestStorageAccess() },
@@ -124,10 +131,11 @@ class MainActivity : ComponentActivity() {
                             }
                         }
                     }
-                }
+                } // ends else block
             }
         }
     }
+}
 
     override fun onResume() {
         super.onResume()

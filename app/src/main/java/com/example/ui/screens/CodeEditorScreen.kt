@@ -294,53 +294,88 @@ fun CodeEditorScreen(
                     ) {
                         val elements = remember(rawText) { SvgConverter.parseSvgForPreview(rawText) }
 
+                        // Parse viewBox dimensions to fit any coordinate space into viewport canvas bounds
+                        val viewBoxDimensions = remember(rawText) {
+                            val viewBoxRegex = Regex("viewBox\\s*=\\s*\"([^\"]*)\"|viewBox\\s*=\\s*'([^']*)'")
+                            val match = viewBoxRegex.find(rawText)
+                            val cleanedAttr = match?.groupValues?.get(1)?.ifEmpty { null } ?: match?.groupValues?.get(2)
+                            val parts = cleanedAttr?.trim()?.split(Regex("\\s+|,\\s*"))
+                            if (parts != null && parts.size >= 4) {
+                                val w = parts[2].toFloatOrNull() ?: 100f
+                                val h = parts[3].toFloatOrNull() ?: 100f
+                                Pair(w, h)
+                            } else {
+                                val widthRegex = Regex("width\\s*=\\s*\"([^\"]*)\"|width\\s*=\\s*'([^']*)'")
+                                val heightRegex = Regex("height\\s*=\\s*\"([^\"]*)\"|height\\s*=\\s*'([^']*)'")
+                                val wVal = (widthRegex.find(rawText)?.groupValues?.get(1) ?: widthRegex.find(rawText)?.groupValues?.get(2))
+                                    ?.removeSuffix("px")?.removeSuffix("dp")?.toFloatOrNull() ?: 100f
+                                val hVal = (heightRegex.find(rawText)?.groupValues?.get(1) ?: heightRegex.find(rawText)?.groupValues?.get(2))
+                                    ?.removeSuffix("px")?.removeSuffix("dp")?.toFloatOrNull() ?: 100f
+                                Pair(wVal, hVal)
+                            }
+                        }
+
                         Canvas(modifier = Modifier.fillMaxSize()) {
-                            elements.forEach { element ->
-                                when (element) {
-                                    is SvgElement.Rect -> {
-                                        drawRect(
-                                            color = element.fill,
-                                            topLeft = androidx.compose.ui.geometry.Offset(element.x, element.y),
-                                            size = androidx.compose.ui.geometry.Size(element.width, element.height)
-                                        )
-                                    }
-                                    is SvgElement.Circle -> {
-                                        drawCircle(
-                                            color = element.fill,
-                                            radius = element.r,
-                                            center = androidx.compose.ui.geometry.Offset(element.cx, element.cy)
-                                        )
-                                    }
-                                    is SvgElement.Line -> {
-                                        drawLine(
-                                            color = element.stroke,
-                                            start = androidx.compose.ui.geometry.Offset(element.x1, element.y1),
-                                            end = androidx.compose.ui.geometry.Offset(element.x2, element.y2),
-                                            strokeWidth = element.strokeWidth
-                                        )
-                                    }
-                                    is SvgElement.Polygon -> {
-                                        if (element.points.isNotEmpty()) {
-                                            val p = Path().apply {
-                                                moveTo(element.points[0].first, element.points[0].second)
-                                                for (i in 1 until element.points.size) {
-                                                    lineTo(element.points[i].first, element.points[i].second)
+                            val (viewportW, viewportH) = viewBoxDimensions
+                            if (viewportW > 0f && viewportH > 0f) {
+                                val scaleX = size.width / viewportW
+                                val scaleY = size.height / viewportH
+                                val scaleFactor = minOf(scaleX, scaleY)
+                                val offsetX = (size.width - (viewportW * scaleFactor)) / 2f
+                                val offsetY = (size.height - (viewportH * scaleFactor)) / 2f
+
+                                drawContext.canvas.save()
+                                drawContext.canvas.translate(offsetX, offsetY)
+                                drawContext.canvas.scale(scaleFactor, scaleFactor)
+
+                                elements.forEach { element ->
+                                    when (element) {
+                                        is SvgElement.Rect -> {
+                                            drawRect(
+                                                color = element.fill,
+                                                topLeft = androidx.compose.ui.geometry.Offset(element.x, element.y),
+                                                size = androidx.compose.ui.geometry.Size(element.width, element.height)
+                                            )
+                                        }
+                                        is SvgElement.Circle -> {
+                                            drawCircle(
+                                                color = element.fill,
+                                                radius = element.r,
+                                                center = androidx.compose.ui.geometry.Offset(element.cx, element.cy)
+                                            )
+                                        }
+                                        is SvgElement.Line -> {
+                                            drawLine(
+                                                color = element.stroke,
+                                                start = androidx.compose.ui.geometry.Offset(element.x1, element.y1),
+                                                end = androidx.compose.ui.geometry.Offset(element.x2, element.y2),
+                                                strokeWidth = element.strokeWidth
+                                            )
+                                        }
+                                        is SvgElement.Polygon -> {
+                                            if (element.points.isNotEmpty()) {
+                                                val p = Path().apply {
+                                                    moveTo(element.points[0].first, element.points[0].second)
+                                                    for (i in 1 until element.points.size) {
+                                                        lineTo(element.points[i].first, element.points[i].second)
+                                                    }
+                                                    close()
                                                 }
-                                                close()
+                                                drawPath(p, color = element.fill)
                                             }
-                                            drawPath(p, color = element.fill)
                                         }
-                                    }
-                                    is SvgElement.PathElement -> {
-                                        val p = SvgConverter.buildComposePath(element.pathData)
-                                        if (element.fill != Color.Transparent) {
-                                            drawPath(p, color = element.fill)
-                                        }
-                                        if (element.stroke != Color.Transparent) {
-                                            drawPath(p, color = element.stroke, style = Stroke(width = element.strokeWidth))
+                                        is SvgElement.PathElement -> {
+                                            val p = SvgConverter.buildComposePath(element.pathData)
+                                            if (element.fill != Color.Transparent) {
+                                                drawPath(p, color = element.fill)
+                                            }
+                                            if (element.stroke != Color.Transparent) {
+                                                drawPath(p, color = element.stroke, style = Stroke(width = element.strokeWidth))
+                                            }
                                         }
                                     }
                                 }
+                                drawContext.canvas.restore()
                             }
                         }
                     }
@@ -351,10 +386,13 @@ fun CodeEditorScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "ANDROID VECTOR XML RESOURCE",
+                            text = "ANDROID VECTOR XML",
+                            modifier = Modifier.weight(1f).padding(end = 8.dp),
                             style = MaterialTheme.typography.labelMedium,
                             color = SleekTextMain,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                         )
 
                         Button(
