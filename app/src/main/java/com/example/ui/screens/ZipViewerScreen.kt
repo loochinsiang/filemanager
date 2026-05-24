@@ -158,7 +158,9 @@ fun ZipViewerScreen(
                 .background(SleekBg)
         ) {
             if (isLoading) {
-                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center), color = SleekFolderText)
+                com.example.ui.components.LoadingScreen(
+                    message = "Reading zip entries..."
+                )
             } else if (entries.isEmpty()) {
                 Column(
                     modifier = Modifier.fillMaxSize(),
@@ -232,34 +234,12 @@ fun ZipViewerScreen(
                 }
             }
 
-            AnimatedVisibility(
-                visible = isExtracting,
-                modifier = Modifier.align(Alignment.Center)
-            ) {
-                Card(
-                    modifier = Modifier.padding(32.dp),
-                    shape = RoundedCornerShape(20.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, SleekBorderLight)
-                ) {
-                    Column(
-                        modifier = Modifier.padding(24.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        Text("Extracting files...", fontWeight = FontWeight.Bold, color = SleekTextMain)
-                        Spacer(Modifier.height(16.dp))
-                        LinearProgressIndicator(
-                            progress = { extractionRatio },
-                            modifier = Modifier.fillMaxWidth().height(8.dp),
-                            color = SleekFolderText,
-                            trackColor = SleekOtherBg
-                        )
-                        Spacer(Modifier.height(8.dp))
-                        Text("${(extractionRatio * 100).toInt()}% Done", style = MaterialTheme.typography.labelSmall, color = SleekTextSub)
-                    }
-                }
+            if (isExtracting) {
+                com.example.ui.components.ProgressScreen(
+                    progress = extractionRatio,
+                    message = "Extracting ZIP archive...",
+                    statusText = "Extracting files to device folder"
+                )
             }
 
             previewEntry?.let { (name, text) ->

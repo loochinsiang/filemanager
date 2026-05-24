@@ -220,64 +220,71 @@ fun MusicPlayerScreen(
                     .border(1.dp, SleekBorderLight, shape = RoundedCornerShape(24.dp)),
                 contentAlignment = Alignment.Center
             ) {
-                Canvas(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-                    val barsCount = actualWaveform.size
-                    val barWidth = size.width / (barsCount * 1.5f)
-                    val space = barWidth * 0.5f
+                if (isDecodingWaveform) {
+                    com.example.ui.components.LoadingScreen(
+                        message = "Decoding real audio waveform...",
+                        modifier = Modifier.fillMaxSize()
+                    )
+                } else {
+                    Canvas(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+                        val barsCount = actualWaveform.size
+                        val barWidth = size.width / (barsCount * 1.5f)
+                        val space = barWidth * 0.5f
 
-                    for (i in 0 until barsCount) {
-                        // Apply Equalizer boosts dynamic multipliers to specific ranges of the waveform bars
-                        val eqFactor = when {
-                            i < 7 -> eq60Hz
-                            i < 14 -> eq230Hz
-                            i < 21 -> eq910Hz
-                            i < 28 -> eq4kHz
-                            else -> eq14kHz
+                        for (i in 0 until barsCount) {
+                            // Apply Equalizer boosts dynamic multipliers to specific ranges of the waveform bars
+                            val eqFactor = when {
+                                i < 7 -> eq60Hz
+                                i < 14 -> eq230Hz
+                                i < 21 -> eq910Hz
+                                i < 28 -> eq4kHz
+                                else -> eq14kHz
+                            }
+                            val boostMultiplier = 1f + (eqFactor / 20f)
+
+                            // Calculate live bouncing effect based on the real envelope amplitudes of the loaded audio file!
+                            val baseAmplitude = actualWaveform[i]
+                            val liveBouncing = if (isPlaying) {
+                                val pulseSpeed = 1f + (i % 4) * 0.2f
+                                (kotlin.math.sin(livePhase * pulseSpeed + i) * 0.15f) + 0.15f
+                            } else {
+                                0f
+                            }
+
+                            // Apply limiter threshold reduction
+                            val rawHeight = size.height * (baseAmplitude + liveBouncing) * boostMultiplier * speedState
+                            val limiterFactor = 1f + (limiterDb / 32f) // reduction ratio
+                            val cleanHeight = (rawHeight * limiterFactor).coerceIn(6f, size.height - 30f)
+
+                            val x = i * (barWidth + space) + space
+                            val y = (size.height - cleanHeight) / 2f
+
+                            drawRoundRect(
+                                brush = Brush.verticalGradient(
+                                    colors = listOf(SleekFolderText, SleekCodeText)
+                                ),
+                                topLeft = androidx.compose.ui.geometry.Offset(x, y),
+                                size = androidx.compose.ui.geometry.Size(barWidth, cleanHeight),
+                                cornerRadius = androidx.compose.ui.geometry.CornerRadius(4.dp.toPx(), 4.dp.toPx())
+                            )
                         }
-                        val boostMultiplier = 1f + (eqFactor / 20f)
+                    }
 
-                        // Calculate live bouncing effect based on the real envelope amplitudes of the loaded audio file!
-                        val baseAmplitude = actualWaveform[i]
-                        val liveBouncing = if (isPlaying) {
-                            val pulseSpeed = 1f + (i % 4) * 0.2f
-                            (kotlin.math.sin(livePhase * pulseSpeed + i) * 0.15f) + 0.15f
-                        } else {
-                            0f
-                        }
-
-                        // Apply limiter threshold reduction
-                        val rawHeight = size.height * (baseAmplitude + liveBouncing) * boostMultiplier * speedState
-                        val limiterFactor = 1f + (limiterDb / 32f) // reduction ratio
-                        val cleanHeight = (rawHeight * limiterFactor).coerceIn(6f, size.height - 30f)
-
-                        val x = i * (barWidth + space) + space
-                        val y = (size.height - cleanHeight) / 2f
-
-                        drawRoundRect(
-                            brush = Brush.verticalGradient(
-                                colors = listOf(SleekFolderText, SleekCodeText)
-                            ),
-                            topLeft = androidx.compose.ui.geometry.Offset(x, y),
-                            size = androidx.compose.ui.geometry.Size(barWidth, cleanHeight),
-                            cornerRadius = androidx.compose.ui.geometry.CornerRadius(4.dp.toPx(), 4.dp.toPx())
+                    Box(
+                        modifier = Modifier
+                            .size(64.dp)
+                            .clip(CircleShape)
+                            .background(SleekFolderBg.copy(alpha = 0.95f))
+                            .border(1.dp, SleekFolderText, CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = if (isPlaying) Icons.Default.Audiotrack else Icons.Default.PlayArrow,
+                            contentDescription = null,
+                            tint = SleekFolderText,
+                            modifier = Modifier.size(28.dp)
                         )
                     }
-                }
-
-                Box(
-                    modifier = Modifier
-                        .size(64.dp)
-                        .clip(CircleShape)
-                        .background(SleekFolderBg.copy(alpha = 0.95f))
-                        .border(1.dp, SleekFolderText, CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = if (isPlaying) Icons.Default.Audiotrack else Icons.Default.PlayArrow,
-                        contentDescription = null,
-                        tint = SleekFolderText,
-                        modifier = Modifier.size(28.dp)
-                    )
                 }
             }
 
@@ -608,13 +615,16 @@ private fun extractRealWaveform(file: File, barsCount: Int = 36): FloatArray {
             for (step in 0 until barsCount) {
                 val targetUs = (step * durationUs) / barsCount
                 extractor.seekTo(targetUs, MediaExtractor.SEEK_TO_CLOSEST_SYNC)
+                try {
+                    codec.flush()
+                } catch (_: Exception) {}
                 
                 var amplitudeSum = 0f
                 var samplesCount = 0
                 var decoded = false
                 var attempts = 0
                 
-                while (!decoded && attempts < 10) {
+                while (!decoded && attempts < 50) {
                     attempts++
                     val inputIndex = codec.dequeueInputBuffer(3000)
                     if (inputIndex >= 0) {

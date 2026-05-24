@@ -55,6 +55,13 @@ fun MainFileManagerScreen(
     
     val activeRoot = phoneRoot
 
+    // Navigate to the parent directory on system back gesture when inside a subdirectory
+    androidx.activity.compose.BackHandler(enabled = activeTab == MainTab.FILES && currentDirectory.absolutePath != activeRoot.absolutePath) {
+        currentDirectory.parentFile?.let {
+            onDirectoryChange(it)
+        }
+    }
+
     var fileList by remember { mutableStateOf<List<File>>(emptyList()) }
     var searchQuery by remember { mutableStateOf("") }
     var selectedFilter by remember { mutableStateOf("All") } // "All", "Source", "Media", "Archives", "Images"
@@ -64,12 +71,35 @@ fun MainFileManagerScreen(
     var showCreateFileDialog by remember { mutableStateOf(false) }
     var newItemName by remember { mutableStateOf("") }
     
+    var binaryChoiceFile by remember { mutableStateOf<File?>(null) }
+    var largeFileWarningFile by remember { mutableStateOf<File?>(null) }
+    
     var activeItemActions by remember { mutableStateOf<File?>(null) } // BottomSheet control
     var showRenameDialog by remember { mutableStateOf<File?>(null) }
     var showDeleteConfirmDialog by remember { mutableStateOf<File?>(null) }
     var showDetailsDialog by remember { mutableStateOf<File?>(null) }
 
     val context = LocalContext.current
+
+    val handleFileOpen = { file: File ->
+        val ext = file.extension.lowercase(Locale.ROOT)
+        when {
+            ext == "zip" -> onOpenFile(file, "zip")
+            ext in listOf("png", "jpg", "jpeg", "webp") -> onOpenFile(file, "image")
+            ext == "svg" -> onOpenFile(file, "editor")
+            ext in listOf("wav", "mp3", "m4a", "ogg") -> onOpenFile(file, "sound")
+            ext == "bin" || ext == "hex" -> onOpenFile(file, "hex")
+            else -> {
+                if (isBinaryFile(file)) {
+                    binaryChoiceFile = file
+                } else if (file.length() > 1.5 * 1024 * 1024) {
+                    largeFileWarningFile = file
+                } else {
+                    onOpenFile(file, "editor")
+                }
+            }
+        }
+    }
 
     // Read files directory list
     val refreshFilesList = {
@@ -149,21 +179,40 @@ fun MainFileManagerScreen(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Column {
-                                Text(
-                                    text = "Explorer",
-                                    style = MaterialTheme.typography.headlineMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = SleekTextMain,
-                                    letterSpacing = (-0.5).sp
-                                )
-                                Text(
-                                    text = if (!hasStoragePermission) "Access Required" else "In: " + (if (currentDirectory.absolutePath == activeRoot.absolutePath) "root" else currentDirectory.name),
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = SleekTextSub,
-                                    modifier = Modifier.padding(top = 4.dp)
-                                )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                if (currentDirectory.absolutePath != activeRoot.absolutePath) {
+                                    IconButton(
+                                        onClick = {
+                                            currentDirectory.parentFile?.let { onDirectoryChange(it) }
+                                        },
+                                        modifier = Modifier.size(40.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.ArrowBack,
+                                            contentDescription = "Parent Directory",
+                                            tint = SleekTextMain
+                                        )
+                                    }
+                                }
+                                Column {
+                                    Text(
+                                        text = "Explorer",
+                                        style = MaterialTheme.typography.headlineMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = SleekTextMain,
+                                        letterSpacing = (-0.5).sp
+                                    )
+                                    Text(
+                                        text = if (!hasStoragePermission) "Access Required" else "In: " + (if (currentDirectory.absolutePath == activeRoot.absolutePath) "root" else currentDirectory.name),
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = SleekTextSub,
+                                        modifier = Modifier.padding(top = 4.dp)
+                                    )
+                                }
                             }
                             
                             if (hasStoragePermission) {
@@ -578,15 +627,7 @@ fun MainFileManagerScreen(
                                                         onDirectoryChange(file)
                                                     } else {
                                                         addRecentFile(context, file)
-                                                        val ext = file.extension.lowercase(Locale.ROOT)
-                                                        when {
-                                                            ext == "zip" -> onOpenFile(file, "zip")
-                                                            ext in listOf("png", "jpg", "jpeg") -> onOpenFile(file, "image")
-                                                            ext == "svg" -> onOpenFile(file, "editor")
-                                                            ext in listOf("wav", "mp3", "m4a") -> onOpenFile(file, "sound")
-                                                            ext == "bin" || ext == "hex" -> onOpenFile(file, "hex")
-                                                            else -> onOpenFile(file, "editor")
-                                                        }
+                                                        handleFileOpen(file)
                                                     }
                                                 },
                                                 onOptions = {
@@ -631,15 +672,7 @@ fun MainFileManagerScreen(
                                 FileElementRow(
                                     file = file,
                                     onClick = {
-                                        val ext = file.extension.lowercase(Locale.ROOT)
-                                        when {
-                                            ext == "zip" -> onOpenFile(file, "zip")
-                                            ext in listOf("png", "jpg", "jpeg") -> onOpenFile(file, "image")
-                                            ext == "svg" -> onOpenFile(file, "editor")
-                                            ext in listOf("wav", "mp3", "m4a") -> onOpenFile(file, "sound")
-                                            ext == "bin" || ext == "hex" -> onOpenFile(file, "hex")
-                                            else -> onOpenFile(file, "editor")
-                                        }
+                                        handleFileOpen(file)
                                     },
                                     onOptions = {
                                         activeItemActions = file
@@ -1015,6 +1048,101 @@ fun MainFileManagerScreen(
         )
     }
 
+    // Dialog: Binary Choice Alert
+    binaryChoiceFile?.let { targetFile ->
+        AlertDialog(
+            onDismissRequest = { binaryChoiceFile = null },
+            icon = { Icon(Icons.Default.Info, contentDescription = null, tint = SleekFolderText) },
+            title = { Text("Unsupported / Binary File", fontWeight = FontWeight.Bold, color = SleekTextMain) },
+            text = {
+                Text(
+                    "The file \"${targetFile.name}\" appears to contain binary data or uses an unsupported media format.\n\n" +
+                    "Opening it directly in the text editor might cause severe lag or completely crash the application.\n\n" +
+                    "How would you like to inspect this file?",
+                    color = SleekTextMain
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        binaryChoiceFile = null
+                        onOpenFile(targetFile, "hex")
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = SleekFolderText)
+                ) {
+                    Text("Open in Hex Inspector", color = Color.White)
+                }
+            },
+            dismissButton = {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    TextButton(
+                        onClick = {
+                            binaryChoiceFile = null
+                            onOpenFile(targetFile, "editor")
+                        }
+                    ) {
+                        Text("Force Open as Text", color = SleekTextSub)
+                    }
+                    TextButton(
+                        onClick = { binaryChoiceFile = null }
+                    ) {
+                        Text("Cancel", color = SleekTextSub)
+                    }
+                }
+            },
+            containerColor = SleekBg,
+            shape = RoundedCornerShape(16.dp)
+        )
+    }
+
+    // Dialog: Large File Warning Alert
+    largeFileWarningFile?.let { targetFile ->
+        AlertDialog(
+            onDismissRequest = { largeFileWarningFile = null },
+            icon = { Icon(Icons.Default.Warning, contentDescription = null, tint = SleekFolderText) },
+            title = { Text("Large File Warning", fontWeight = FontWeight.Bold, color = SleekTextMain) },
+            text = {
+                val sizeOnMb = String.format("%.2f", targetFile.length().toFloat() / (1024 * 1024))
+                Text(
+                    "The file \"${targetFile.name}\" is very large (${sizeOnMb} MB).\n\n" +
+                    "Opening huge text files causes memory pressure and makes editor scroll extremely laggy.\n\n" +
+                    "Would you like to open it anyway, or inspect via Hex Editor?",
+                    color = SleekTextMain
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        largeFileWarningFile = null
+                        onOpenFile(targetFile, "editor")
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = SleekFolderText)
+                ) {
+                    Text("Force Open as Text", color = Color.White)
+                }
+            },
+            dismissButton = {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    TextButton(
+                        onClick = {
+                            largeFileWarningFile = null
+                            onOpenFile(targetFile, "hex")
+                        }
+                    ) {
+                        Text("Use Hex Inspector", color = SleekFolderText)
+                    }
+                    TextButton(
+                        onClick = { largeFileWarningFile = null }
+                    ) {
+                        Text("Cancel", color = SleekTextSub)
+                    }
+                }
+            },
+            containerColor = SleekBg,
+            shape = RoundedCornerShape(16.dp)
+        )
+    }
+
     // Dialog: Permission Explainer
     if (showPermissionExplainer) {
         AlertDialog(
@@ -1248,4 +1376,44 @@ fun getRecentFiles(context: android.content.Context): List<File> {
     val prefs = context.getSharedPreferences("app_prefs", android.content.Context.MODE_PRIVATE)
     val paths = prefs.getString("recent_files", "")?.split("|")?.filter { it.isNotEmpty() } ?: emptyList()
     return paths.map { File(it) }.filter { it.exists() }
+}
+
+fun isBinaryFile(file: File): Boolean {
+    if (!file.exists() || file.isDirectory) return false
+    val extension = file.extension.lowercase(Locale.ROOT)
+    
+    // List of definitely text extensions
+    val textExts = listOf(
+        "kt", "kts", "java", "js", "py", "css", "xml", "json", "md", "txt", "svg", 
+        "html", "htm", "log", "gradle", "properties", "toml", "yaml", "yml", "ini", "conf", "sh", "bat"
+    )
+    if (extension in textExts) {
+        return false
+    }
+    
+    // Check known binary extensions
+    val binaryExts = listOf(
+        "mp4", "mkv", "avi", "mov", "wmv", "3gp", "flv", "webm",
+        "mp3", "wav", "m4a", "ogg", "flac", "aac",
+        "png", "jpg", "jpeg", "gif", "webp", "bmp", "ico",
+        "zip", "tar", "gz", "rar", "7z", "apk", "jar", "class",
+        "pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx",
+        "bin", "hex", "exe", "dll", "so", "o", "a", "db", "sqlite"
+    )
+    if (extension in binaryExts) return true
+    
+    // Fallback: Check first 1024 bytes for null bytes or if file is > 500KB
+    if (file.length() > 500 * 1024) return true
+    try {
+        file.inputStream().use { input ->
+            val buffer = ByteArray(1024)
+            val bytesRead = input.read(buffer)
+            for (i in 0 until bytesRead) {
+                if (buffer[i] == 0.toByte()) {
+                    return true
+                }
+            }
+        }
+    } catch (_: Exception) {}
+    return false
 }

@@ -13,6 +13,7 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.*
@@ -71,11 +72,22 @@ class MainActivity : ComponentActivity() {
                             }
                         )
                     } else {
-                        // Animated transition fade for full panels
+                        // Animated transition utilizing Material Design 3 Expressive sliding crossfade and spring physics
                         AnimatedContent(
                             targetState = currentScreen,
                             transitionSpec = {
-                                fadeIn() togetherWith fadeOut()
+                                val isGoingBack = targetState is ScreenState.Main
+                                if (isGoingBack) {
+                                    (slideInHorizontally(animationSpec = spring(dampingRatio = 0.82f, stiffness = 320f)) { -it / 3 } + fadeIn(animationSpec = tween(180)))
+                                        .togetherWith(
+                                            slideOutHorizontally(animationSpec = spring(dampingRatio = 0.82f, stiffness = 320f)) { it } + fadeOut(animationSpec = tween(150))
+                                        )
+                                } else {
+                                    (slideInHorizontally(animationSpec = spring(dampingRatio = 0.82f, stiffness = 320f)) { it } + fadeIn(animationSpec = tween(180)))
+                                        .togetherWith(
+                                            slideOutHorizontally(animationSpec = spring(dampingRatio = 0.82f, stiffness = 320f)) { -it / 3 } + fadeOut(animationSpec = tween(150))
+                                        )
+                                }
                             },
                             modifier = Modifier.fillMaxSize(),
                             label = "panel_swap"

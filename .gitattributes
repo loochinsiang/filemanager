@@ -1,0 +1,10 @@
+# Treat binary files as binary so CRLF conversion does not corrupt them
+*.jar binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.gif binary
+*.mp3 binary
+*.wav binary
+*.keystore binary
