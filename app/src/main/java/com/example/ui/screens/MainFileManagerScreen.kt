@@ -3,6 +3,7 @@ package com.example.ui.screens
 import android.content.Intent
 import android.widget.Toast
 import androidx.core.content.FileProvider
+import kotlinx.coroutines.*
 import android.os.StatFs
 import androidx.compose.animation.*
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -66,6 +67,9 @@ fun MainFileManagerScreen(
     }
 
     var fileList by remember { mutableStateOf<List<File>>(emptyList()) }
+    var isFolderLoading by remember { mutableStateOf(false) }
+    var recentFilesKey by remember { mutableStateOf(0) }
+    val scope = rememberCoroutineScope()
     var searchQuery by remember { mutableStateOf("") }
     var selectedFilter by remember { mutableStateOf("All") } // "All", "Source", "Media", "Archives", "Images"
 
@@ -90,7 +94,7 @@ fun MainFileManagerScreen(
             ext == "zip" -> onOpenFile(file, "zip")
             ext in listOf("png", "jpg", "jpeg", "webp") -> onOpenFile(file, "image")
             ext == "svg" -> onOpenFile(file, "editor")
-            ext in listOf("wav", "mp3", "m4a", "ogg") -> onOpenFile(file, "sound")
+            ext in listOf("wav", "mp3", "m4a", "ogg", "flac", "mp4", "mkv") -> onOpenFile(file, "sound")
             ext == "bin" || ext == "hex" -> onOpenFile(file, "hex")
             ext == "apk" -> {
                 installApk(context, file)
@@ -109,17 +113,24 @@ fun MainFileManagerScreen(
 
     // Read files directory list
     val refreshFilesList = {
-        val files = try {
-            if (hasStoragePermission) {
-                currentDirectory.listFiles()?.toList() ?: emptyList()
-            } else {
+        isFolderLoading = true
+        scope.launch(Dispatchers.IO) {
+            delay(200) // Brief aesthetic delay to highlight folder loading animations gracefully
+            val files = try {
+                if (hasStoragePermission) {
+                    currentDirectory.listFiles()?.toList() ?: emptyList()
+                } else {
+                    emptyList()
+                }
+            } catch (_: Exception) {
                 emptyList()
             }
-        } catch (_: Exception) {
-            emptyList()
+            val sorted = files.sortedWith(compareBy({ !it.isDirectory }, { it.name.lowercase(Locale.ROOT) }))
+            withContext(Dispatchers.Main) {
+                fileList = sorted
+                isFolderLoading = false
+            }
         }
-        // Folders first, files after
-        fileList = files.sortedWith(compareBy({ !it.isDirectory }, { it.name.lowercase(Locale.ROOT) }))
     }
 
 
@@ -160,7 +171,7 @@ fun MainFileManagerScreen(
             val matchesSearch = file.name.contains(searchQuery, ignoreCase = true)
             val matchesChip = when (selectedFilter) {
                 "Source" -> !file.isDirectory && file.extension.lowercase(Locale.ROOT) in listOf("kt", "kts", "java", "js", "py", "css", "xml", "json", "md", "txt", "svg")
-                "Media" -> !file.isDirectory && file.extension.lowercase(Locale.ROOT) in listOf("mp3", "wav", "m4a", "ogg")
+                "Media" -> !file.isDirectory && file.extension.lowercase(Locale.ROOT) in listOf("mp3", "wav", "m4a", "ogg", "flac", "mp4", "mkv")
                 "Archives" -> !file.isDirectory && file.extension.lowercase(Locale.ROOT) == "zip"
                 "Images" -> !file.isDirectory && file.extension.lowercase(Locale.ROOT) in listOf("png", "jpg", "jpeg", "svg")
                 else -> true
@@ -284,6 +295,8 @@ fun MainFileManagerScreen(
                                 onClick = {
                                     val prefs = context.getSharedPreferences("app_prefs", android.content.Context.MODE_PRIVATE)
                                     prefs.edit().putString("recent_files", "").apply()
+                                    recentFilesKey++
+                                    Toast.makeText(context, "History cleared successfully", Toast.LENGTH_SHORT).show()
                                 },
                                 colors = IconButtonDefaults.iconButtonColors(containerColor = SleekOtherBg)
                             ) {
@@ -604,7 +617,17 @@ fun MainFileManagerScreen(
                                 },
                                 label = "directory_flip"
                             ) { activeDir ->
-                                if (filteredFiles.isEmpty()) {
+                                if (isFolderLoading) {
+                                    Column(
+                                        modifier = Modifier.fillMaxSize(),
+                                        verticalArrangement = Arrangement.Center,
+                                        horizontalAlignment = Alignment.CenterHorizontally
+                                    ) {
+                                        CircularProgressIndicator(color = SleekFolderText)
+                                        Spacer(Modifier.height(12.dp))
+                                        Text("Loading directory...", color = SleekTextSub, style = MaterialTheme.typography.bodyMedium)
+                                    }
+                                } else if (filteredFiles.isEmpty()) {
                                     Column(
                                         modifier = Modifier.fillMaxSize(),
                                         verticalArrangement = Arrangement.Center,
@@ -648,7 +671,7 @@ fun MainFileManagerScreen(
                     }
                 }
                 MainTab.RECENT -> {
-                    val recentsList = remember(activeTab) { getRecentFiles(context) }
+                    val recentsList = remember(activeTab, recentFilesKey) { getRecentFiles(context) }
                     
                     if (recentsList.isEmpty()) {
                         Column(
@@ -782,6 +805,8 @@ fun MainFileManagerScreen(
                                 }
                             }
                         }
+
+                        com.example.ui.components.LanguagePreference()
 
                         Text("Performance & Cache Controls", fontWeight = FontWeight.Bold, color = SleekTextMain, fontSize = 16.sp)
 
@@ -1271,7 +1296,7 @@ fun FileElementRow(
             ext in listOf("png", "jpg", "jpeg") -> Triple(SleekImageBg, SleekImageText, Icons.Default.Image)
             ext == "svg" -> Triple(SleekImageBg, SleekImageText, Icons.Default.Palette)
             ext == "zip" -> Triple(SleekZipBg, SleekZipText, Icons.Default.FolderZip)
-            ext in listOf("mp3", "wav", "m4a", "ogg") -> Triple(SleekAudioBg, SleekAudioText, Icons.Default.LibraryMusic)
+            ext in listOf("mp3", "wav", "m4a", "ogg", "flac", "mp4", "mkv") -> Triple(SleekAudioBg, SleekAudioText, Icons.Default.LibraryMusic)
             else -> Triple(SleekOtherBg, SleekOtherText, Icons.Default.InsertDriveFile)
         }
 
@@ -1310,7 +1335,7 @@ fun FileElementRow(
                 val format = SimpleDateFormat("MM-dd HH:mm", Locale.getDefault())
                 val typeLabel = when {
                     ext == "zip" -> "Archive"
-                    ext in listOf("mp3", "wav", "m4a") -> "Audio"
+                    ext in listOf("mp3", "wav", "m4a", "ogg", "flac", "mp4", "mkv") -> "Media"
                     ext == "svg" -> "SVG"
                     ext in listOf("png", "jpg", "jpeg") -> "Image"
                     ext in listOf("kt", "java", "js") -> "Kotlin"

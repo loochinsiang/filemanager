@@ -37,6 +37,11 @@ sealed class ScreenState {
 class MainActivity : ComponentActivity() {
     private val hasStoragePermissionVal = mutableStateOf(false)
 
+    override fun attachBaseContext(newBase: android.content.Context) {
+        val localeManager = com.example.ui.components.LocaleManager.getInstance(newBase)
+        super.attachBaseContext(localeManager.applyLocaleToContext(newBase))
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
