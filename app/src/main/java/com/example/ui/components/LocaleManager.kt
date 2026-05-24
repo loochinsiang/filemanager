@@ -80,7 +80,7 @@ data class LanguageItem(
  */
 enum class CompletionStatus(val label: String, val color: @Composable () -> Color) {
     COMPLETE("", { Color.Transparent }),
-    INCOMPLETE("Traducción incompleta", { SleekTextSub }),
+    INCOMPLETE("Incomplete", { SleekTextSub }),
     BETA("BETA", { SleekFolderText }),
     EXPERIMENTAL("Experimental", { SleekTextAlt })
 }
@@ -119,56 +119,13 @@ class LocaleManager private constructor(private val context: Context) {
 
         // Configuración de idiomas con banderas y mejor organización
         private val LANGUAGE_CONFIG = mapOf(
-            "system_default" to LanguageConfig("Sistema", "", CompletionStatus.COMPLETE, "🌐"),
+            "system_default" to LanguageConfig("System Default", "", CompletionStatus.COMPLETE, "🌐"),
             "en" to LanguageConfig("English", "English", CompletionStatus.COMPLETE, "🇺🇸"),
-            "es" to LanguageConfig("Spanish", "Español", CompletionStatus.COMPLETE, "🇪🇸"),
-            "fr" to LanguageConfig("French", "Français", CompletionStatus.COMPLETE, "🇫🇷"),
+            "zh" to LanguageConfig("Chinese", "中文", CompletionStatus.COMPLETE, "🇨🇳"),
+            "fr" to LanguageConfig("French", "Français", CompletionStatus.EXPERIMENTAL, "🇫🇷"),
             "de" to LanguageConfig("German", "Deutsch", CompletionStatus.COMPLETE, "🇩🇪"),
-            "it" to LanguageConfig("Italian", "Italiano", CompletionStatus.COMPLETE, "🇮🇹"),
-            "pt-BR" to LanguageConfig("Portuguese (Brazil)", "Português (Brasil)", CompletionStatus.COMPLETE, "🇧🇷"),
-            "ru" to LanguageConfig("Russian", "Русский", CompletionStatus.COMPLETE, "🇷🇺"),
-            "zh-CN" to LanguageConfig("Chinese (Simplified)", "简体中文", CompletionStatus.COMPLETE, "🇨🇳"),
-            "zh-TW" to LanguageConfig("Chinese (Traditional)", "繁體中文", CompletionStatus.COMPLETE, "🇹🇼"),
-            "ja" to LanguageConfig("Japanese", "日本語", CompletionStatus.COMPLETE, "🇯🇵"),
-            "ko" to LanguageConfig("Korean", "한국어", CompletionStatus.COMPLETE, "🇰🇷"),
-            "ar" to LanguageConfig("Arabic", "العربية", CompletionStatus.BETA, "🇸🇦"),
-            "hi" to LanguageConfig("Hindi", "हिन्दी", CompletionStatus.BETA, "🇮🇳"),
-            "th" to LanguageConfig("Thai", "ไทย", CompletionStatus.INCOMPLETE, "🇹🇭"),
-            "vi" to LanguageConfig("Vietnamese", "Tiếng Việt", CompletionStatus.INCOMPLETE, "🇻🇳"),
-            "tr" to LanguageConfig("Turkish", "Türkçe", CompletionStatus.BETA, "🇹🇷"),
-            "pl" to LanguageConfig("Polish", "Polski", CompletionStatus.INCOMPLETE, "🇵🇱"),
-            "nl" to LanguageConfig("Dutch", "Nederlands", CompletionStatus.INCOMPLETE, "🇳🇱"),
-            "sv" to LanguageConfig("Swedish", "Svenska", CompletionStatus.INCOMPLETE, "🇸🇪"),
-            "da" to LanguageConfig("Danish", "Dansk", CompletionStatus.INCOMPLETE, "🇩🇰"),
-            "no" to LanguageConfig("Norwegian", "Norsk", CompletionStatus.INCOMPLETE, "🇳🇴"),
-            "fi" to LanguageConfig("Finnish", "Suomi", CompletionStatus.EXPERIMENTAL, "🇫🇮"),
-            "hu" to LanguageConfig("Hungarian", "Magyar", CompletionStatus.EXPERIMENTAL, "🇭🇺"),
-            "cs" to LanguageConfig("Czech", "Čeština", CompletionStatus.EXPERIMENTAL, "🇨🇿"),
-            "sk" to LanguageConfig("Slovak", "Slovenčina", CompletionStatus.EXPERIMENTAL, "🇸🇰"),
-            "uk" to LanguageConfig("Ukrainian", "Українська", CompletionStatus.BETA, "🇺🇦"),
-            "he" to LanguageConfig("Hebrew", "עברית", CompletionStatus.BETA, "🇮🇱"),
-            "fa" to LanguageConfig("Persian", "فارسی", CompletionStatus.EXPERIMENTAL, "🇮🇷"),
-            "bn" to LanguageConfig("Bengali", "বাংলা", CompletionStatus.EXPERIMENTAL, "🇧🇩"),
-            "ta" to LanguageConfig("Tamil", "தமிழ்", CompletionStatus.EXPERIMENTAL, "🇱🇰"),
-            "te" to LanguageConfig("Telugu", "తెలుగు", CompletionStatus.EXPERIMENTAL, "🇮🇳"),
-            "ml" to LanguageConfig("Malayalam", "മലയാളം", CompletionStatus.EXPERIMENTAL, "🇮🇳"),
-            "kn" to LanguageConfig("Kannada", "കನ್ನಡ", CompletionStatus.EXPERIMENTAL, "🇮🇳"),
-            "gu" to LanguageConfig("Gujarati", "ગુજરાતી", CompletionStatus.EXPERIMENTAL, "🇮🇳"),
-            "pa" to LanguageConfig("Punjabi", "ਪੰਜਾਬੀ", CompletionStatus.EXPERIMENTAL, "🇮🇳"),
-            "mr" to LanguageConfig("Marathi", "മਰਾठी", CompletionStatus.EXPERIMENTAL, "🇮🇳"),
-            "ne" to LanguageConfig("Nepali", "नेपाली", CompletionStatus.EXPERIMENTAL, "🇳🇵"),
-            "si" to LanguageConfig("Sinhala", "සිංහල", CompletionStatus.EXPERIMENTAL, "🇱🇰"),
-            "my" to LanguageConfig("Myanmar", "မြန်မာ", CompletionStatus.EXPERIMENTAL, "🇲🇲"),
-            "km" to LanguageConfig("Khmer", "ខ្မែร", CompletionStatus.EXPERIMENTAL, "🇰🇭"),
-            "lo" to LanguageConfig("Lao", "ລາວ", CompletionStatus.EXPERIMENTAL, "🇱🇦"),
-            "ka" to LanguageConfig("Georgian", "ქართული", CompletionStatus.EXPERIMENTAL, "🇬🇪"),
-            "am" to LanguageConfig("Amharic", "አማርኛ", CompletionStatus.EXPERIMENTAL, "🇪🇹"),
-            "id" to LanguageConfig("Indonesian", "Bahasa Indonesia", CompletionStatus.BETA, "🇮🇩"),
-            "ms" to LanguageConfig("Malay", "Bahasa Melayu", CompletionStatus.EXPERIMENTAL, "🇲🇾"),
-            "tl" to LanguageConfig("Filipino", "Filipino", CompletionStatus.EXPERIMENTAL, "🇵🇭"),
-            "sw" to LanguageConfig("Swahili", "Kiswahili", CompletionStatus.EXPERIMENTAL, "🇰🇪"),
-            "zu" to LanguageConfig("Zulu", "isiZulu", CompletionStatus.EXPERIMENTAL, "🇿🇦"),
-            "af" to LanguageConfig("Afrikaans", "Afrikaans", CompletionStatus.EXPERIMENTAL, "🇿🇦")
+            "it" to LanguageConfig("Italian", "Italiano", CompletionStatus.EXPERIMENTAL, "🇮🇹"),
+            "ja" to LanguageConfig("Japanese", "日本語", CompletionStatus.COMPLETE, "🇯🇵")
         )
 
         private data class LanguageConfig(
@@ -246,7 +203,7 @@ class LocaleManager private constructor(private val context: Context) {
                 LanguageItem(
                     code = code,
                     displayName = if (code == SYSTEM_DEFAULT) {
-                        "Sistema ($systemDisplayName)"
+                        "System ($systemDisplayName)"
                     } else {
                         config.displayName
                     },
@@ -310,7 +267,7 @@ class LocaleManager private constructor(private val context: Context) {
             true
         } catch (e: Exception) {
             Log.e(TAG, "Error actualizando idioma a $languageCode", e)
-            _changeState.value = LanguageChangeState.Error(e.message ?: "Error desconocido")
+            _changeState.value = LanguageChangeState.Error(e.message ?: "Unknown error")
             false
         }
     }
@@ -510,13 +467,13 @@ fun LanguageSelector(
             when (changeState) {
                 is LanguageChangeState.Changing -> {
                     LanguageChangeIndicator(
-                        text = "Aplicando cambios...",
+                        text = "Applying changes...",
                         showProgress = true
                     )
                 }
                 is LanguageChangeState.Success -> {
                     LanguageChangeIndicator(
-                        text = "¡Listo! Reiniciando aplicación...",
+                        text = "Done! Restarting application...",
                         showProgress = false,
                         icon = Icons.Default.Check
                     )
@@ -935,7 +892,7 @@ fun CurrentLanguageInfo(
 
                 Column {
                     Text(
-                        text = "Idioma actual",
+                        text = "Current Language",
                         style = MaterialTheme.typography.labelMedium,
                         color = SleekTextSub,
                         fontWeight = FontWeight.Medium

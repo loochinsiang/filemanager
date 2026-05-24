@@ -43,7 +43,7 @@ enum class MainTab {
     FILES, RECENT, TOOLS, SETTINGS
 }
 
-@OptIn(ExperimentalAnimationApi::class, ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalAnimationApi::class, ExperimentalMaterial3Api::class, androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun MainFileManagerScreen(
     phoneRoot: File,
@@ -385,7 +385,7 @@ fun MainFileManagerScreen(
                             tint = if (activeTab == MainTab.FILES) SleekFolderText else SleekTextAlt.copy(alpha = 0.6f)
                         )
                     },
-                    label = { Text("Files", fontWeight = FontWeight.Bold, color = if (activeTab == MainTab.FILES) SleekFolderText else SleekTextAlt.copy(alpha = 0.6f)) }
+                    label = { Text(androidx.compose.ui.res.stringResource(com.example.R.string.tab_files), fontWeight = FontWeight.Bold, color = if (activeTab == MainTab.FILES) SleekFolderText else SleekTextAlt.copy(alpha = 0.6f)) }
                 )
 
                 // Recent Tab
@@ -399,7 +399,7 @@ fun MainFileManagerScreen(
                             tint = if (activeTab == MainTab.RECENT) SleekFolderText else SleekTextAlt.copy(alpha = 0.6f)
                         )
                     },
-                    label = { Text("Recent", fontWeight = FontWeight.Bold, color = if (activeTab == MainTab.RECENT) SleekFolderText else SleekTextAlt.copy(alpha = 0.6f)) }
+                    label = { Text(androidx.compose.ui.res.stringResource(com.example.R.string.tab_recent), fontWeight = FontWeight.Bold, color = if (activeTab == MainTab.RECENT) SleekFolderText else SleekTextAlt.copy(alpha = 0.6f)) }
                 )
 
                 // Tools Tab
@@ -413,7 +413,7 @@ fun MainFileManagerScreen(
                             tint = if (activeTab == MainTab.TOOLS) SleekFolderText else SleekTextAlt.copy(alpha = 0.6f)
                         )
                     },
-                    label = { Text("Tools", fontWeight = FontWeight.Bold, color = if (activeTab == MainTab.TOOLS) SleekFolderText else SleekTextAlt.copy(alpha = 0.6f)) }
+                    label = { Text(androidx.compose.ui.res.stringResource(com.example.R.string.tab_tools), fontWeight = FontWeight.Bold, color = if (activeTab == MainTab.TOOLS) SleekFolderText else SleekTextAlt.copy(alpha = 0.6f)) }
                 )
 
                 // Settings Tab
@@ -427,7 +427,7 @@ fun MainFileManagerScreen(
                             tint = if (activeTab == MainTab.SETTINGS) SleekFolderText else SleekTextAlt.copy(alpha = 0.6f)
                         )
                     },
-                    label = { Text("Settings", fontWeight = FontWeight.Bold, color = if (activeTab == MainTab.SETTINGS) SleekFolderText else SleekTextAlt.copy(alpha = 0.6f)) }
+                    label = { Text(androidx.compose.ui.res.stringResource(com.example.R.string.tab_settings), fontWeight = FontWeight.Bold, color = if (activeTab == MainTab.SETTINGS) SleekFolderText else SleekTextAlt.copy(alpha = 0.6f)) }
                 )
             }
         },
@@ -623,7 +623,7 @@ fun MainFileManagerScreen(
                                         verticalArrangement = Arrangement.Center,
                                         horizontalAlignment = Alignment.CenterHorizontally
                                     ) {
-                                        CircularProgressIndicator(color = SleekFolderText)
+                                        androidx.compose.material3.LoadingIndicator(color = SleekFolderText)
                                         Spacer(Modifier.height(12.dp))
                                         Text("Loading directory...", color = SleekTextSub, style = MaterialTheme.typography.bodyMedium)
                                     }

@@ -1,0 +1,31 @@
+<resources>
+    <string name="app_name">Gestionnaire de Fichiers</string>
+    <string name="language">Langue</string>
+    <string name="tab_files">Fichiers</string>
+    <string name="tab_recent">Récent</string>
+    <string name="tab_tools">Outils</string>
+    <string name="tab_settings">Paramètres</string>
+    <string name="btn_cancel">Annuler</string>
+    <string name="btn_close">Fermer</string>
+    <string name="btn_delete">Supprimer</string>
+    <string name="btn_confirm">Confirmer</string>
+    <string name="btn_create">Créer</string>
+    <string name="btn_extract_all">Tout Extraire</string>
+    <string name="title_create_dir">Créer un Dossier</string>
+    <string name="title_create_file">Créer un Fichier</string>
+    <string name="title_secure_delete">Suppression Sécurisée</string>
+    <string name="title_zip_extractor">EXTRACTEUR D\'ARCHIVE ZIP</string>
+    <string name="msg_loading_dir">Chargement du dossier...</string>
+    <string name="msg_empty_dir">Dossier vide</string>
+    <string name="msg_no_recent">Aucun Historique</string>
+    <string name="msg_no_recent_desc">Les fichiers que vous ouvrez apparaîtront ici.</string>
+    <string name="current_language">Langue Actuelle</string>
+    <string name="system_default">Défaut du Système</string>
+    <string name="search_placeholder">Rechercher des fichiers...</string>
+    <string name="folder_name_placeholder">Nom du dossier...</string>
+    <string name="menu_rename">Renommer l\'élément</string>
+    <string name="menu_duplicate">Dupliquer la ressource</string>
+    <string name="menu_details">Métadonnées Détaillées</string>
+    <string name="menu_hex">Inspecter les octets HEX</string>
+    <string name="menu_install_apk">Installer le paquet APK</string>
+</resources>

@@ -1,0 +1,31 @@
+<resources>
+    <string name="app_name">文件管理器</string>
+    <string name="language">语言</string>
+    <string name="tab_files">文件</string>
+    <string name="tab_recent">最近</string>
+    <string name="tab_tools">工具</string>
+    <string name="tab_settings">设置</string>
+    <string name="btn_cancel">取消</string>
+    <string name="btn_close">关闭</string>
+    <string name="btn_delete">删除</string>
+    <string name="btn_confirm">确认</string>
+    <string name="btn_create">创建</string>
+    <string name="btn_extract_all">全部提取</string>
+    <string name="title_create_dir">创建文件夹</string>
+    <string name="title_create_file">创建源文件</string>
+    <string name="title_secure_delete">安全删除</string>
+    <string name="title_zip_extractor">ZIP 档案提取器</string>
+    <string name="msg_loading_dir">正在加载目录...</string>
+    <string name="msg_empty_dir">空目录</string>
+    <string name="msg_no_recent">没有最近的历史记录</string>
+    <string name="msg_no_recent_desc">您打开或查看的文件将出现在这里以便快速访问。</string>
+    <string name="current_language">当前语言</string>
+    <string name="system_default">系统默认</string>
+    <string name="search_placeholder">搜索文件和档案 ...</string>
+    <string name="folder_name_placeholder">文件夹名称 ...</string>
+    <string name="menu_rename">重命名元素</string>
+    <string name="menu_duplicate">复制资源</string>
+    <string name="menu_details">查看详细元数据</string>
+    <string name="menu_hex">检查原始 HEX 字节</string>
+    <string name="menu_install_apk">安装 APK 包</string>
+</resources>

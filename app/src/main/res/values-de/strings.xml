@@ -1,0 +1,31 @@
+<resources>
+    <string name="app_name">Dateimanager</string>
+    <string name="language">Sprache</string>
+    <string name="tab_files">Dateien</string>
+    <string name="tab_recent">Zuletzt</string>
+    <string name="tab_tools">Werkzeuge</string>
+    <string name="tab_settings">Einstellungen</string>
+    <string name="btn_cancel">Abbrechen</string>
+    <string name="btn_close">Schließen</string>
+    <string name="btn_delete">Löschen</string>
+    <string name="btn_confirm">Bestätigen</string>
+    <string name="btn_create">Erstellen</string>
+    <string name="btn_extract_all">Alle extrahieren</string>
+    <string name="title_create_dir">Verzeichnis erstellen</string>
+    <string name="title_create_file">Quelldatei erstellen</string>
+    <string name="title_secure_delete">Sicheres Löschen</string>
+    <string name="title_zip_extractor">ZIP-ARCHIV ENTPACKER</string>
+    <string name="msg_loading_dir">Verzeichnis wird geladen...</string>
+    <string name="msg_empty_dir">Leeres Verzeichnis</string>
+    <string name="msg_no_recent">Kein aktueller Verlauf</string>
+    <string name="msg_no_recent_desc">Dateien, die Sie öffnen oder anzeigen, erscheinen hier für schnellen Zugriff.</string>
+    <string name="current_language">Aktuelle Sprache</string>
+    <string name="system_default">Systemstandard</string>
+    <string name="search_placeholder">Dateien &amp; Archive suchen ...</string>
+    <string name="folder_name_placeholder">Ordnername ...</string>
+    <string name="menu_rename">Element umbenennen</string>
+    <string name="menu_duplicate">Ressource duplizieren</string>
+    <string name="menu_details">Detaillierte Metadaten anzeigen</string>
+    <string name="menu_hex">Rohe HEX-Bytes prüfen</string>
+    <string name="menu_install_apk">APK-Paket installieren</string>
+</resources>

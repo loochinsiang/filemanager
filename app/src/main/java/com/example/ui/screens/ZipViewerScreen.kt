@@ -25,6 +25,7 @@ import com.example.ui.theme.*
 import java.io.File
 import java.io.FileOutputStream
 import java.io.InputStream
+import kotlinx.coroutines.launch
 import java.util.zip.ZipEntry
 import java.util.zip.ZipFile
 
@@ -234,6 +235,29 @@ fun ZipViewerScreen(
                             },
                             onExtract = {
                                 extractZip(false, entry.name)
+                            },
+                            onDelete = {
+                                kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+                                    val success = ZipHelper.removeEntry(file, entry.name)
+                                    if (success) {
+                                        // Refetch zip entries
+                                        try {
+                                            if (file.exists() && file.isFile) {
+                                                ZipFile(file).use { zip ->
+                                                    val list = zip.entries().asSequence().map { e ->
+                                                        ZipEntryInfo(
+                                                            name = e.name,
+                                                            size = e.size,
+                                                            compressedSize = e.compressedSize,
+                                                            isDirectory = e.isDirectory
+                                                        )
+                                                    }.toList()
+                                                    entries = list
+                                                }
+                                            }
+                                        } catch (e: Exception) {}
+                                    }
+                                }
                             }
                         )
                     }
@@ -287,7 +311,8 @@ fun ZipViewerScreen(
 fun ZipEntryRow(
     entry: ZipEntryInfo,
     onPreview: () -> Unit,
-    onExtract: () -> Unit
+    onExtract: () -> Unit,
+    onDelete: () -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -356,6 +381,10 @@ fun ZipEntryRow(
                 IconButton(onClick = onExtract) {
                     Icon(Icons.Default.Download, contentDescription = "Extract Single File", tint = SleekCodeText)
                 }
+            }
+
+            IconButton(onClick = onDelete) {
+                Icon(Icons.Default.Delete, contentDescription = "Delete from Zip", tint = Color.Red)
             }
         }
     }
