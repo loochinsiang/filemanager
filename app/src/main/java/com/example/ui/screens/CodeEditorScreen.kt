@@ -50,13 +50,29 @@ fun CodeEditorScreen(
     var isSaving by remember { mutableStateOf(false) }
     var showPreviewTab by remember { mutableStateOf(false) } // SVG Live Preview & XML Converter Toggle
     var convertedXmlText by remember { mutableStateOf("") }
+    var isTruncated by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
     // Initialize rawText and language
     LaunchedEffect(file) {
         if (file.exists() && file.isFile) {
-            rawText = file.readText()
+            val length = file.length()
+            val maxBytes = 102 * 1024L * 1024L // Wait, 1 MB is 1024 * 1024
+            val oneMB = 1024 * 1024L
+            if (length > oneMB) {
+                isTruncated = true
+                try {
+                    val buffer = ByteArray(oneMB.toInt())
+                    file.inputStream().use { input -> input.read(buffer) }
+                    rawText = String(buffer, Charsets.UTF_8)
+                } catch (_: Exception) {
+                    rawText = "Failed to load content securely."
+                }
+            } else {
+                isTruncated = false
+                rawText = file.readText()
+            }
             language = when (file.extension.lowercase()) {
                 "kt", "kts" -> "kotlin"
                 "java" -> "java"
@@ -104,12 +120,19 @@ fun CodeEditorScreen(
                     IconButton(onClick = { if (scaleFactor.value < 28f) scaleFactor = (scaleFactor.value + 2).sp }) {
                         Icon(Icons.Default.ZoomIn, contentDescription = "Zoom In Font", tint = SleekTextMain)
                     }
-                    IconButton(onClick = {
-                        isSaving = true
-                        file.writeText(rawText)
-                        isSaving = false
-                    }) {
-                        Icon(Icons.Default.Save, contentDescription = "Save Code Changes", tint = SleekTextMain)
+                    IconButton(
+                        onClick = {
+                            isSaving = true
+                            file.writeText(rawText)
+                            isSaving = false
+                        },
+                        enabled = !isTruncated
+                    ) {
+                        Icon(
+                            Icons.Default.Save,
+                            contentDescription = "Save Code Changes",
+                            tint = if (isTruncated) SleekTextSub.copy(alpha = 0.4f) else SleekTextMain
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -126,6 +149,30 @@ fun CodeEditorScreen(
                 .fillMaxSize()
                 .background(SleekBg)
         ) {
+            if (isTruncated) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color(0xFFBA1A1A).copy(alpha = 0.12f))
+                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Warning,
+                        contentDescription = "Warning",
+                        tint = Color(0xFFBA1A1A)
+                    )
+                    Text(
+                        text = "File is extremely large. Loaded in Read-Only mode (first 1 MB shown) to protect dynamic memory and prevent scrolling lag.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color(0xFFBA1A1A),
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                Divider(color = SleekBorderLight)
+            }
+
             // Screen toggles
             Row(
                 modifier = Modifier

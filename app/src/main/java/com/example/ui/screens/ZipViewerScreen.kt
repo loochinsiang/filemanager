@@ -218,7 +218,13 @@ fun ZipViewerScreen(
                                         val rentry = zip.getEntry(entry.name)
                                         if (rentry != null) {
                                             val textContent = zip.getInputStream(rentry).use { input ->
-                                                input.bufferedReader().use { it.readText() }
+                                                val maxBytes = 128 * 1024
+                                                val bytes = input.readNBytes(maxBytes)
+                                                var result = String(bytes, Charsets.UTF_8)
+                                                if (rentry.size > maxBytes) {
+                                                    result += "\n\n--- [PREVIEW TRUNCATED FOR PERFORMANCE: Showing first 128 KB only] ---"
+                                                }
+                                                result
                                             }
                                             previewEntry = Pair(entry.name, textContent)
                                         }

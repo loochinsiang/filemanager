@@ -11,6 +11,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Save
+import androidx.compose.material.icons.filled.ChevronLeft
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -24,6 +26,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ui.theme.*
 import java.io.File
+import java.io.RandomAccessFile
 import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -33,21 +36,48 @@ fun HexEditorScreen(
     onBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val pageSize = 16384 // 16 KB per page
+    val fileLength = remember(file) { if (file.exists() && file.isFile) file.length() else 0L }
+    val totalPages = remember(fileLength) { ((fileLength + pageSize - 1) / pageSize).toInt().coerceAtLeast(1) }
+    
+    var currentPage by remember { mutableStateOf(0) }
     var rawBytes by remember { mutableStateOf<ByteArray>(ByteArray(0)) }
     var selectedIndex by remember { mutableStateOf<Int?>(null) }
     var editHexValue by remember { mutableStateOf("") }
     var successSaveMessage by remember { mutableStateOf<String?>(null) }
 
-    LaunchedEffect(file) {
+    LaunchedEffect(file, currentPage) {
         if (file.exists() && file.isFile) {
-            rawBytes = file.readBytes()
+            try {
+                file.inputStream().use { input ->
+                    val offset = currentPage.toLong() * pageSize
+                    input.skip(offset)
+                    val buffer = ByteArray(pageSize)
+                    val bytesRead = input.read(buffer)
+                    if (bytesRead > 0) {
+                        rawBytes = buffer.copyOf(bytesRead)
+                    } else {
+                        rawBytes = ByteArray(0)
+                    }
+                }
+            } catch (_: Exception) {
+                rawBytes = ByteArray(0)
+            }
+            selectedIndex = null
         }
     }
 
     val saveChanges = {
         try {
-            file.writeBytes(rawBytes)
-            successSaveMessage = "Changes saved standard compliance"
+            if (file.exists() && file.isFile) {
+                RandomAccessFile(file, "rw").use { raf ->
+                    raf.seek(currentPage.toLong() * pageSize)
+                    raf.write(rawBytes)
+                }
+                successSaveMessage = "Changes saved standard compliance"
+            } else {
+                successSaveMessage = "Target file does not exist"
+            }
         } catch (_: Exception) {
             successSaveMessage = "Failed writing binary bytes"
         }
@@ -59,7 +89,11 @@ fun HexEditorScreen(
                 title = {
                     Column {
                         Text(file.name, style = MaterialTheme.typography.titleMedium, maxLines = 1, color = SleekTextMain, fontWeight = FontWeight.Bold)
-                        Text("BINARY HEX INSPECTOR & EDITOR", style = MaterialTheme.typography.labelSmall, color = SleekFolderText, fontWeight = FontWeight.ExtraBold)
+                        val formattedSize = remember(fileLength) {
+                            if (fileLength > 1024 * 1024) String.format(Locale.ROOT, "%.2f MB", fileLength.toFloat() / (1024 * 1024))
+                            else String.format(Locale.ROOT, "%.1f KB", fileLength.toFloat() / 1024)
+                        }
+                        Text("BINARY HEX INSPECTOR & EDITOR ($formattedSize)", style = MaterialTheme.typography.labelSmall, color = SleekFolderText, fontWeight = FontWeight.ExtraBold)
                     }
                 },
                 navigationIcon = {
@@ -85,6 +119,53 @@ fun HexEditorScreen(
                 .fillMaxSize()
                 .background(SleekBg)
         ) {
+            // Hex Viewer Pagination Controller
+            if (totalPages > 1) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(SleekBg)
+                        .padding(horizontal = 16.dp, vertical = 6.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Viewing page ${currentPage + 1} of $totalPages",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = SleekTextMain
+                    )
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        IconButton(
+                            onClick = { if (currentPage > 0) currentPage-- },
+                            enabled = currentPage > 0,
+                            modifier = Modifier.size(36.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.ChevronLeft,
+                                contentDescription = "Previous Page",
+                                tint = if (currentPage > 0) SleekFolderText else SleekTextSub.copy(alpha = 0.4f)
+                            )
+                        }
+                        IconButton(
+                            onClick = { if (currentPage < totalPages - 1) currentPage++ },
+                            enabled = currentPage < totalPages - 1,
+                            modifier = Modifier.size(36.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.ChevronRight,
+                                contentDescription = "Next Page",
+                                tint = if (currentPage < totalPages - 1) SleekFolderText else SleekTextSub.copy(alpha = 0.4f)
+                            )
+                        }
+                    }
+                }
+                Divider(color = SleekBorderLight)
+            }
+
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -116,7 +197,8 @@ fun HexEditorScreen(
                                 .padding(vertical = 1.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            val offsetHex = String.format(Locale.ROOT, "%08X", rowIndex * 16)
+                            val absoluteOffset = currentPage.toLong() * pageSize + rowIndex * 16
+                            val offsetHex = String.format(Locale.ROOT, "%08X", absoluteOffset)
                             Text(
                                 text = offsetHex,
                                 style = TextStyle(
@@ -220,8 +302,9 @@ fun HexEditorScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Column {
+                                val absoluteIndex = currentPage.toLong() * pageSize + index
                                 Text(
-                                    text = "Offset: 0x${String.format(Locale.ROOT, "%08X", index)}",
+                                    text = "Offset: 0x${String.format(Locale.ROOT, "%08X", absoluteIndex)}",
                                     fontWeight = FontWeight.Bold,
                                     color = SleekTextMain
                                 )
