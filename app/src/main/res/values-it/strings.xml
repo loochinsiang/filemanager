@@ -28,4 +28,14 @@
     <string name="menu_details">Visualizza metadati</string>
     <string name="menu_hex">Ispeziona byte HEX</string>
     <string name="menu_install_apk">Installa pacchetto APK</string>
+
+    <string name="header_explorer">Esploratore</string>
+    <string name="subtitle_in">In: %1$s</string>
+    <string name="btn_root">ROOT</string>
+    <string name="filter_all">Tutto</string>
+    <string name="filter_source">Codice</string>
+    <string name="filter_media">Media</string>
+    <string name="filter_archives">Archivi</string>
+    <string name="filter_images">Immagini</string>
+    <string name="active_device_storage">Spazio Attivo del Dispositivo</string>
 </resources>

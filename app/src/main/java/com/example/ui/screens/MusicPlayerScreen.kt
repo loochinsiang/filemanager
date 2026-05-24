@@ -272,6 +272,46 @@ fun MusicPlayerScreen(
                         Icon(Icons.Default.FastForward, contentDescription = "ForwardDelta", tint = SleekTextAlt, modifier = Modifier.size(28.dp))
                     }
                 }
+
+                Spacer(Modifier.height(40.dp))
+                
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Switch(checked = false, onCheckedChange = {}, colors = SwitchDefaults.colors(checkedThumbColor = SleekFolderText, checkedTrackColor = SleekFolderBg))
+                        Spacer(Modifier.height(8.dp))
+                        Text("REVERB", fontSize = 10.sp, color = SleekTextSub, fontWeight = FontWeight.Bold)
+                    }
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Switch(checked = true, onCheckedChange = {}, colors = SwitchDefaults.colors(checkedThumbColor = SleekFolderText, checkedTrackColor = SleekFolderBg))
+                        Spacer(Modifier.height(8.dp))
+                        Text("LIMITER", fontSize = 10.sp, color = SleekTextSub, fontWeight = FontWeight.Bold)
+                    }
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("128", fontSize = 28.sp, color = SleekTextMain, fontWeight = FontWeight.Black)
+                        Text("EST BPM", fontSize = 10.sp, color = SleekTextSub, fontWeight = FontWeight.Bold)
+                    }
+                }
+
+                Spacer(Modifier.height(20.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("0.0", fontSize = 16.sp, color = SleekTextMain, fontWeight = FontWeight.Bold)
+                        Spacer(Modifier.height(4.dp))
+                        Text("PITCH", fontSize = 10.sp, color = SleekTextSub, fontWeight = FontWeight.Bold)
+                    }
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("1.0x", fontSize = 16.sp, color = SleekTextMain, fontWeight = FontWeight.Bold)
+                        Spacer(Modifier.height(4.dp))
+                        Text("TEMPO", fontSize = 10.sp, color = SleekTextSub, fontWeight = FontWeight.Bold)
+                    }
+                }
             }
         }
     }

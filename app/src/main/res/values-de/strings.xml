@@ -28,4 +28,14 @@
     <string name="menu_details">Detaillierte Metadaten anzeigen</string>
     <string name="menu_hex">Rohe HEX-Bytes prüfen</string>
     <string name="menu_install_apk">APK-Paket installieren</string>
+
+    <string name="header_explorer">Explorer</string>
+    <string name="subtitle_in">In: %1$s</string>
+    <string name="btn_root">ROOT</string>
+    <string name="filter_all">Alle</string>
+    <string name="filter_source">Quellcode</string>
+    <string name="filter_media">Medien</string>
+    <string name="filter_archives">Archive</string>
+    <string name="filter_images">Bilder</string>
+    <string name="active_device_storage">Aktiver Gerätespeicher</string>
 </resources>

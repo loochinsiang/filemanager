@@ -28,4 +28,14 @@
     <string name="menu_details">查看详细元数据</string>
     <string name="menu_hex">检查原始 HEX 字节</string>
     <string name="menu_install_apk">安装 APK 包</string>
+
+    <string name="header_explorer">浏览器</string>
+    <string name="subtitle_in">在中: %1$s</string>
+    <string name="btn_root">根目录</string>
+    <string name="filter_all">全部</string>
+    <string name="filter_source">源码</string>
+    <string name="filter_media">媒体</string>
+    <string name="filter_archives">压缩包</string>
+    <string name="filter_images">图像</string>
+    <string name="active_device_storage">活跃设备存储</string>
 </resources>

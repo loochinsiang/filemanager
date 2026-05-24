@@ -28,4 +28,14 @@
     <string name="menu_details">詳細なメタデータを表示</string>
     <string name="menu_hex">生のHEXバイトを検査</string>
     <string name="menu_install_apk">APKパッケージをインストール</string>
+
+    <string name="header_explorer">エクスプローラー</string>
+    <string name="subtitle_in">場所: %1$s</string>
+    <string name="btn_root">ルート</string>
+    <string name="filter_all">すべて</string>
+    <string name="filter_source">ソースコード</string>
+    <string name="filter_media">メディア</string>
+    <string name="filter_archives">アーカイブ</string>
+    <string name="filter_images">画像</string>
+    <string name="active_device_storage">アクティブデバイスストレージ</string>
 </resources>

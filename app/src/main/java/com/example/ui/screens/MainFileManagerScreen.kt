@@ -216,14 +216,14 @@ fun MainFileManagerScreen(
                                 }
                                 Column {
                                     Text(
-                                        text = "Explorer",
+                                        text = androidx.compose.ui.res.stringResource(com.example.R.string.header_explorer),
                                         style = MaterialTheme.typography.headlineMedium,
                                         fontWeight = FontWeight.Bold,
                                         color = SleekTextMain,
                                         letterSpacing = (-0.5).sp
                                     )
                                     Text(
-                                        text = if (!hasStoragePermission) "Access Required" else "In: " + (if (currentDirectory.absolutePath == activeRoot.absolutePath) "root" else currentDirectory.name),
+                                        text = if (!hasStoragePermission) "Access Required" else androidx.compose.ui.res.stringResource(com.example.R.string.subtitle_in, (if (currentDirectory.absolutePath == activeRoot.absolutePath) "root" else currentDirectory.name)),
                                         fontSize = 12.sp,
                                         fontWeight = FontWeight.SemiBold,
                                         color = SleekTextSub,
@@ -527,12 +527,20 @@ fun MainFileManagerScreen(
                             ) {
                                 listOf("All", "Source", "Media", "Archives", "Images").forEach { filterName ->
                                     val selected = selectedFilter == filterName
+                                    val translatedName = when (filterName) {
+                                        "All" -> androidx.compose.ui.res.stringResource(com.example.R.string.filter_all)
+                                        "Source" -> androidx.compose.ui.res.stringResource(com.example.R.string.filter_source)
+                                        "Media" -> androidx.compose.ui.res.stringResource(com.example.R.string.filter_media)
+                                        "Archives" -> androidx.compose.ui.res.stringResource(com.example.R.string.filter_archives)
+                                        "Images" -> androidx.compose.ui.res.stringResource(com.example.R.string.filter_images)
+                                        else -> filterName
+                                    }
                                     FilterChip(
                                         selected = selected,
                                         onClick = { selectedFilter = filterName },
                                         label = {
                                             Text(
-                                                text = filterName,
+                                                text = translatedName,
                                                 fontSize = 12.sp,
                                                 fontWeight = FontWeight.Bold,
                                                 maxLines = 1,
@@ -581,7 +589,7 @@ fun MainFileManagerScreen(
                                     Column(modifier = Modifier.weight(1f)) {
                                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                                             Text(
-                                                text = "Active Device Storage",
+                                                text = androidx.compose.ui.res.stringResource(com.example.R.string.active_device_storage),
                                                 style = MaterialTheme.typography.labelSmall,
                                                 color = SleekTextSub,
                                                 fontWeight = FontWeight.Bold
@@ -1251,7 +1259,7 @@ fun BreadcrumbsRow(
         segments.forEachIndexed { idx, dir ->
             val isLast = idx == segments.lastIndex
             Text(
-                text = if (dir.absolutePath == root.absolutePath) "ROOT" else dir.name,
+                text = if (dir.absolutePath == root.absolutePath) androidx.compose.ui.res.stringResource(com.example.R.string.btn_root) else dir.name,
                 fontSize = 12.sp,
                 fontWeight = if (isLast) FontWeight.Bold else FontWeight.Medium,
                 color = if (isLast) SleekFolderText else SleekTextSub,

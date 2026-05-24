@@ -28,4 +28,14 @@
     <string name="menu_details">Métadonnées Détaillées</string>
     <string name="menu_hex">Inspecter les octets HEX</string>
     <string name="menu_install_apk">Installer le paquet APK</string>
+
+    <string name="header_explorer">Explorateur</string>
+    <string name="subtitle_in">Dans : %1$s</string>
+    <string name="btn_root">RACINE</string>
+    <string name="filter_all">Tout</string>
+    <string name="filter_source">Code</string>
+    <string name="filter_media">Média</string>
+    <string name="filter_archives">Archives</string>
+    <string name="filter_images">Images</string>
+    <string name="active_device_storage">Stockage Actif de l\'Appareil</string>
 </resources>
