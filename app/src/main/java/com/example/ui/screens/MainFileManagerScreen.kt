@@ -28,15 +28,26 @@ import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import android.os.StatFs
 
 @OptIn(ExperimentalAnimationApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun MainFileManagerScreen(
     sandboxRoot: File,
+    phoneRoot: File,
+    hasStoragePermission: Boolean,
+    onRequestStoragePermission: () -> Unit,
     onOpenFile: (File, String) -> Unit, // file and "editor" | "zip" | "image" | "sound" | "hex"
     modifier: Modifier = Modifier
 ) {
+    var isBrowsingPhoneStorage by remember { mutableStateOf(false) }
     var currentDirectory by remember { mutableStateOf(sandboxRoot) }
+    var showPermissionExplainer by remember { mutableStateOf(false) }
+    
+    val activeRoot = if (isBrowsingPhoneStorage && hasStoragePermission) phoneRoot else sandboxRoot
+
     var fileList by remember { mutableStateOf<List<File>>(emptyList()) }
     var searchQuery by remember { mutableStateOf("") }
     var selectedFilter by remember { mutableStateOf("All") } // "All", "Source", "Media", "Archives", "Images"
@@ -53,9 +64,30 @@ fun MainFileManagerScreen(
 
     // Read files directory list
     val refreshFilesList = {
-        val files = currentDirectory.listFiles()?.toList() ?: emptyList()
+        val files = try {
+            currentDirectory.listFiles()?.toList() ?: emptyList()
+        } catch (_: Exception) {
+            emptyList()
+        }
         // Folders first, files after
         fileList = files.sortedWith(compareBy({ !it.isDirectory }, { it.name.lowercase(Locale.ROOT) }))
+    }
+
+    LaunchedEffect(isBrowsingPhoneStorage, hasStoragePermission) {
+        if (isBrowsingPhoneStorage) {
+            if (hasStoragePermission) {
+                if (!currentDirectory.absolutePath.startsWith(phoneRoot.absolutePath)) {
+                    currentDirectory = phoneRoot
+                }
+            } else {
+                currentDirectory = sandboxRoot
+                isBrowsingPhoneStorage = false
+            }
+        } else {
+            if (!currentDirectory.absolutePath.startsWith(sandboxRoot.absolutePath)) {
+                currentDirectory = sandboxRoot
+            }
+        }
     }
 
     LaunchedEffect(currentDirectory) {
@@ -63,17 +95,40 @@ fun MainFileManagerScreen(
     }
 
     // Storage estimation metrics
-    val storageMetrics = remember(fileList, currentDirectory) {
-        var usedSpace: Long = 0
-        fun accum(f: File) {
-            if (f.isFile) usedSpace += f.length()
-            else f.listFiles()?.forEach { accum(it) }
+    val storageMetrics = remember(fileList, currentDirectory, isBrowsingPhoneStorage, hasStoragePermission) {
+        if (isBrowsingPhoneStorage && hasStoragePermission) {
+            try {
+                val stat = StatFs(phoneRoot.path)
+                val blockSize = stat.blockSizeLong
+                val totalBlocks = stat.blockCountLong
+                val availableBlocks = stat.availableBlocksLong
+                
+                val totalBytes = totalBlocks * blockSize
+                val availableBytes = availableBlocks * blockSize
+                val usedBytes = totalBytes - availableBytes
+                
+                val gbUsed = usedBytes.toDouble() / (1024 * 1024 * 1024)
+                val gbTotal = totalBytes.toDouble() / (1024 * 1024 * 1024)
+                
+                val ratio = (gbUsed / gbTotal).coerceIn(0.01, 1.0)
+                Pair(String.format(Locale.ROOT, "%.1f GB of %.1f GB", gbUsed, gbTotal), ratio.toFloat())
+            } catch (_: Exception) {
+                Pair("Phone Storage Available", 0.5f)
+            }
+        } else {
+            var usedSpace: Long = 0
+            fun accum(f: File) {
+                try {
+                    if (f.isFile) usedSpace += f.length()
+                    else f.listFiles()?.forEach { accum(it) }
+                } catch (_: Exception) {}
+            }
+            accum(sandboxRoot)
+            val mbUsed = usedSpace.toDouble() / (1024 * 1024)
+            val limitMb = 12.0 // simulate sandboxed quota
+            val ratio = (mbUsed / limitMb).coerceIn(0.01, 1.0)
+            Pair(String.format(Locale.ROOT, "%.1f MB of %.1f MB", mbUsed, limitMb), ratio.toFloat())
         }
-        accum(sandboxRoot)
-        val mbUsed = usedSpace.toDouble() / (1024 * 1024)
-        val limitMb = 12.0 // simulate sandboxed quota
-        val ratio = (mbUsed / limitMb).coerceIn(0.01, 1.0)
-        Pair(String.format(Locale.ROOT, "%.1f MB of %.1f MB", mbUsed, limitMb), ratio.toFloat())
     }
 
     // Filter logic
@@ -115,27 +170,67 @@ fun MainFileManagerScreen(
                         )
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(top = 4.dp)
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            modifier = Modifier.padding(top = 6.dp)
                         ) {
+                            // Sandbox Mode Selector
                             Box(
                                 modifier = Modifier
-                                    .background(SleekOtherBg, shape = RoundedCornerShape(12.dp))
-                                    .padding(horizontal = 8.dp, vertical = 3.dp)
+                                    .background(
+                                        color = if (!isBrowsingPhoneStorage) SleekFolderBg else SleekOtherBg,
+                                        shape = RoundedCornerShape(12.dp)
+                                    )
+                                    .clickable { isBrowsingPhoneStorage = false }
+                                    .padding(horizontal = 10.dp, vertical = 5.dp)
                             ) {
                                 Text(
-                                    text = "Internal",
+                                    text = "Sandbox Environment",
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = SleekTextAlt
+                                    color = if (!isBrowsingPhoneStorage) SleekFolderText else SleekTextAlt
                                 )
                             }
-                            Text(
-                                text = " / " + (if (currentDirectory.absolutePath == sandboxRoot.absolutePath) "root" else currentDirectory.name),
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = SleekTextSub
-                            )
+                            
+                            // Phone Storage Mode Selector
+                            Box(
+                                modifier = Modifier
+                                    .background(
+                                        color = if (isBrowsingPhoneStorage) SleekFolderBg else SleekOtherBg,
+                                        shape = RoundedCornerShape(12.dp)
+                                    )
+                                    .clickable {
+                                        if (!hasStoragePermission) {
+                                            showPermissionExplainer = true
+                                        } else {
+                                            isBrowsingPhoneStorage = true
+                                        }
+                                    }
+                                    .padding(horizontal = 10.dp, vertical = 5.dp)
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    Icon(
+                                        imageVector = Icons.Default.PhoneAndroid,
+                                        contentDescription = null,
+                                        tint = if (isBrowsingPhoneStorage) SleekFolderText else SleekTextAlt,
+                                        modifier = Modifier.size(12.dp)
+                                    )
+                                    Text(
+                                        text = "Phone Files",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (isBrowsingPhoneStorage) SleekFolderText else SleekTextAlt
+                                    )
+                                }
+                            }
                         }
+                        
+                        Text(
+                            text = "Active: " + (if (currentDirectory.absolutePath == activeRoot.absolutePath) "root" else currentDirectory.name),
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = SleekTextSub,
+                            modifier = Modifier.padding(top = 4.dp)
+                        )
                     }
 
                     // Top quick file creators
@@ -159,7 +254,7 @@ fun MainFileManagerScreen(
 
                 // Breadcrumbs navigation row
                 BreadcrumbsRow(
-                    root = sandboxRoot,
+                    root = activeRoot,
                     current = currentDirectory,
                     onBreadcrumbClick = { currentDirectory = it }
                 )
@@ -296,7 +391,9 @@ fun MainFileManagerScreen(
 
                 // Category Filter Chips Row (No nested horizontal structures, simple custom components)
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     val filters = listOf("All", "Source", "Media", "Archives", "Images")
@@ -319,6 +416,51 @@ fun MainFileManagerScreen(
                                 selectedBorderColor = SleekFolderBg
                             )
                         )
+                    }
+                }
+
+                // Storage card positioned safely inside top dashboard to avoid floating overlaps
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, SleekBorderLight)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .padding(12.dp)
+                            .fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .background(SleekFolderBg, shape = RoundedCornerShape(8.dp)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(Icons.Default.SdStorage, contentDescription = null, tint = SleekFolderText, modifier = Modifier.size(18.dp))
+                        }
+                        Spacer(Modifier.width(12.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text(
+                                    text = if (isBrowsingPhoneStorage) "Active Device Storage" else "Storage Metrics Limit", 
+                                    style = MaterialTheme.typography.labelSmall, 
+                                    color = SleekTextSub, 
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(storageMetrics.first, style = MaterialTheme.typography.labelSmall, color = SleekFolderText, fontWeight = FontWeight.Bold)
+                            }
+                            Spacer(Modifier.height(6.dp))
+                            LinearProgressIndicator(
+                                progress = { storageMetrics.second },
+                                modifier = Modifier.fillMaxWidth().height(4.dp),
+                                color = SleekFolderText,
+                                trackColor = SleekOtherBg
+                            )
+                        }
                     }
                 }
             }
@@ -390,45 +532,8 @@ fun MainFileManagerScreen(
                 }
             }
 
-            // Memory quotas card matching light-sleek guidelines
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 12.dp),
-                shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
-                border = androidx.compose.foundation.BorderStroke(1.dp, SleekBorderLight)
-            ) {
-                Row(
-                    modifier = Modifier
-                        .padding(16.dp)
-                        .fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(40.dp)
-                            .background(SleekFolderBg, shape = RoundedCornerShape(10.dp)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(Icons.Default.SdStorage, contentDescription = null, tint = SleekFolderText, modifier = Modifier.size(20.dp))
-                    }
-                    Spacer(Modifier.width(16.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text("Storage Metrics Limit", style = MaterialTheme.typography.labelMedium, color = SleekTextSub, fontWeight = FontWeight.Bold)
-                            Text(storageMetrics.first, style = MaterialTheme.typography.labelSmall, color = SleekFolderText, fontWeight = FontWeight.Bold)
-                        }
-                        Spacer(Modifier.height(8.dp))
-                        LinearProgressIndicator(
-                            progress = { storageMetrics.second },
-                            modifier = Modifier.fillMaxWidth().height(6.dp),
-                            color = SleekFolderText,
-                            trackColor = SleekOtherBg
-                        )
-                    }
-                }
-            }
+            // Empty space block
+            Spacer(modifier = Modifier.height(4.dp))
         }
     }
 
@@ -676,6 +781,32 @@ fun MainFileManagerScreen(
                     onClick = { showDetailsDialog = null },
                     colors = ButtonDefaults.buttonColors(containerColor = SleekFolderBg, contentColor = SleekFolderText)
                 ) { Text("Close", fontWeight = FontWeight.Bold) }
+            }
+        )
+    }
+
+    // Dialog: Permission Explainer
+    if (showPermissionExplainer) {
+        AlertDialog(
+            onDismissRequest = { showPermissionExplainer = false },
+            title = { Text("Grant Storage Access", color = SleekTextMain, fontWeight = FontWeight.Bold) },
+            text = {
+                Text(
+                    text = "To browse and manage your actual device files directly from this manager, please grant storage permissions. You will be redirected to settings to allow All Files access.",
+                    color = SleekTextAlt
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showPermissionExplainer = false
+                        onRequestStoragePermission()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = SleekFolderBg, contentColor = SleekFolderText)
+                ) { Text("Allow Access", fontWeight = FontWeight.Bold) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showPermissionExplainer = false }) { Text("Cancel", color = SleekTextSub) }
             }
         )
     }
