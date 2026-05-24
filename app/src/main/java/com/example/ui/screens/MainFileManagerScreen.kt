@@ -72,6 +72,7 @@ fun MainFileManagerScreen(
     val scope = rememberCoroutineScope()
     var searchQuery by remember { mutableStateOf("") }
     var selectedFilter by remember { mutableStateOf("All") } // "All", "Source", "Media", "Archives", "Images"
+    var sortMode by remember { mutableStateOf("Name (A-Z)") }
 
     // Dialog state controllers
     var showCreateDirDialog by remember { mutableStateOf(false) }
@@ -125,7 +126,23 @@ fun MainFileManagerScreen(
             } catch (_: Exception) {
                 emptyList()
             }
-            val sorted = files.sortedWith(compareBy({ !it.isDirectory }, { it.name.lowercase(Locale.ROOT) }))
+            val sorted = files.sortedWith(Comparator { f1, f2 ->
+                if (f1.isDirectory && !f2.isDirectory) -1
+                else if (!f1.isDirectory && f2.isDirectory) 1
+                else {
+                    when (sortMode) {
+                        "Name (A-Z)" -> f1.name.lowercase(Locale.ROOT).compareTo(f2.name.lowercase(Locale.ROOT))
+                        "Name (Z-A)" -> f2.name.lowercase(Locale.ROOT).compareTo(f1.name.lowercase(Locale.ROOT))
+                        "Size (Asc)" -> f1.length().compareTo(f2.length())
+                        "Size (Desc)" -> f2.length().compareTo(f1.length())
+                        "Date (Desc)" -> f2.lastModified().compareTo(f1.lastModified())
+                        "Date (Asc)" -> f1.lastModified().compareTo(f2.lastModified())
+                        "Type (A-Z)" -> f1.extension.lowercase(Locale.ROOT).compareTo(f2.extension.lowercase(Locale.ROOT))
+                        "Type (Z-A)" -> f2.extension.lowercase(Locale.ROOT).compareTo(f1.extension.lowercase(Locale.ROOT))
+                        else -> f1.name.lowercase(Locale.ROOT).compareTo(f2.name.lowercase(Locale.ROOT))
+                    }
+                }
+            })
             withContext(Dispatchers.Main) {
                 fileList = sorted
                 isFolderLoading = false
@@ -133,9 +150,7 @@ fun MainFileManagerScreen(
         }
     }
 
-
-
-    LaunchedEffect(hasStoragePermission, currentDirectory) {
+    LaunchedEffect(hasStoragePermission, currentDirectory, sortMode) {
         refreshFilesList()
     }
 
@@ -499,7 +514,7 @@ fun MainFileManagerScreen(
                                     .fillMaxWidth()
                                     .padding(vertical = 4.dp)
                                     .testTag("search_files_input"),
-                                placeholder = { Text("Search files & archives ...", color = SleekTextSub) },
+                                placeholder = { Text(androidx.compose.ui.res.stringResource(com.example.R.string.search_placeholder), color = SleekTextSub) },
                                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = SleekTextSub) },
                                 trailingIcon = {
                                     if (searchQuery.isNotEmpty()) {
@@ -518,48 +533,63 @@ fun MainFileManagerScreen(
                                 )
                             )
 
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 6.dp)
-                                    .horizontalScroll(rememberScrollState()),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                listOf("All", "Source", "Media", "Archives", "Images").forEach { filterName ->
-                                    val selected = selectedFilter == filterName
-                                    val translatedName = when (filterName) {
-                                        "All" -> androidx.compose.ui.res.stringResource(com.example.R.string.filter_all)
-                                        "Source" -> androidx.compose.ui.res.stringResource(com.example.R.string.filter_source)
-                                        "Media" -> androidx.compose.ui.res.stringResource(com.example.R.string.filter_media)
-                                        "Archives" -> androidx.compose.ui.res.stringResource(com.example.R.string.filter_archives)
-                                        "Images" -> androidx.compose.ui.res.stringResource(com.example.R.string.filter_images)
-                                        else -> filterName
-                                    }
-                                    FilterChip(
-                                        selected = selected,
-                                        onClick = { selectedFilter = filterName },
-                                        label = {
-                                            Text(
-                                                text = translatedName,
-                                                fontSize = 12.sp,
-                                                fontWeight = FontWeight.Bold,
-                                                maxLines = 1,
-                                                softWrap = false
-                                            )
-                                        },
-                                        colors = FilterChipDefaults.filterChipColors(
-                                            selectedContainerColor = SleekFolderBg,
-                                            selectedLabelColor = SleekFolderText,
-                                            containerColor = Color.White,
-                                            labelColor = SleekTextAlt
-                                        ),
-                                        border = FilterChipDefaults.filterChipBorder(
-                                            enabled = true,
+                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
+                                Row(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .horizontalScroll(rememberScrollState()),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    listOf("All", "Source", "Media", "Archives", "Images").forEach { filterName ->
+                                        val selected = selectedFilter == filterName
+                                        val translatedName = when (filterName) {
+                                            "All" -> androidx.compose.ui.res.stringResource(com.example.R.string.filter_all)
+                                            "Source" -> androidx.compose.ui.res.stringResource(com.example.R.string.filter_source)
+                                            "Media" -> androidx.compose.ui.res.stringResource(com.example.R.string.filter_media)
+                                            "Archives" -> androidx.compose.ui.res.stringResource(com.example.R.string.filter_archives)
+                                            "Images" -> androidx.compose.ui.res.stringResource(com.example.R.string.filter_images)
+                                            else -> filterName
+                                        }
+                                        FilterChip(
                                             selected = selected,
-                                            borderColor = if (selected) SleekFolderBg else SleekBorderLight,
-                                            selectedBorderColor = SleekFolderBg
+                                            onClick = { selectedFilter = filterName },
+                                            label = {
+                                                Text(
+                                                    text = translatedName,
+                                                    fontSize = 12.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    maxLines = 1,
+                                                    softWrap = false
+                                                )
+                                            },
+                                            colors = FilterChipDefaults.filterChipColors(
+                                                selectedContainerColor = SleekFolderBg,
+                                                selectedLabelColor = SleekFolderText,
+                                                containerColor = Color.White,
+                                                labelColor = SleekTextAlt
+                                            ),
+                                            border = FilterChipDefaults.filterChipBorder(
+                                                enabled = true,
+                                                selected = selected,
+                                                borderColor = if (selected) SleekFolderBg else SleekBorderLight,
+                                                selectedBorderColor = SleekFolderBg
+                                            )
                                         )
-                                    )
+                                    }
+                                }
+                                Box {
+                                    var showSortMenu by remember { mutableStateOf(false) }
+                                    IconButton(onClick = { showSortMenu = true }) {
+                                        Icon(Icons.Default.Sort, "Sort", tint = SleekFolderText)
+                                    }
+                                    DropdownMenu(expanded = showSortMenu, onDismissRequest = { showSortMenu = false }) {
+                                        listOf("Name (A-Z)", "Name (Z-A)", "Size (Asc)", "Size (Desc)", "Date (Desc)", "Date (Asc)", "Type (A-Z)", "Type (Z-A)").forEach { mode ->
+                                            DropdownMenuItem(
+                                                text = { Text(mode, fontWeight = if (sortMode == mode) FontWeight.Bold else FontWeight.Normal) },
+                                                onClick = { sortMode = mode; showSortMenu = false }
+                                            )
+                                        }
+                                    }
                                 }
                             }
 

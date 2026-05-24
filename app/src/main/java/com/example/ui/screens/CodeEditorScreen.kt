@@ -51,6 +51,9 @@ fun CodeEditorScreen(
     var showPreviewTab by remember { mutableStateOf(false) } // SVG Live Preview & XML Converter Toggle
     var convertedXmlText by remember { mutableStateOf("") }
     var isTruncated by remember { mutableStateOf(false) }
+    var showSearchReplace by remember { mutableStateOf(false) }
+    var searchQuery by remember { mutableStateOf("") }
+    var replaceQuery by remember { mutableStateOf("") }
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
@@ -114,6 +117,9 @@ fun CodeEditorScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = { showSearchReplace = !showSearchReplace }) {
+                        Icon(Icons.Default.Search, contentDescription = "Find and Replace", tint = if (showSearchReplace) SleekFolderText else SleekTextMain)
+                    }
                     IconButton(onClick = { if (scaleFactor.value > 10f) scaleFactor = (scaleFactor.value - 2).sp }) {
                         Icon(Icons.Default.ZoomOut, contentDescription = "Zoom Out Font", tint = SleekTextMain)
                     }
@@ -245,6 +251,75 @@ fun CodeEditorScreen(
                                     color = if (showPreviewTab) SleekFolderText else SleekTextSub
                                 )
                             }
+                        }
+                    }
+                }
+            }
+
+            AnimatedVisibility(visible = showSearchReplace) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 4.dp)
+                        .background(SleekBottomNavBg, RoundedCornerShape(12.dp))
+                        .border(1.dp, SleekBorderLight, RoundedCornerShape(12.dp))
+                        .padding(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    TextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        placeholder = { Text("Search ...", fontSize = 12.sp) },
+                        colors = TextFieldDefaults.colors(
+                            unfocusedContainerColor = Color.White,
+                            focusedContainerColor = Color.White,
+                            unfocusedIndicatorColor = Color.Transparent,
+                            focusedIndicatorColor = Color.Transparent
+                        ),
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth().height(48.dp),
+                        shape = RoundedCornerShape(8.dp),
+                        trailingIcon = {
+                            if (searchQuery.isNotEmpty()) {
+                                Text(
+                                    "${rawText.split(searchQuery).size - 1} found",
+                                    fontSize = 12.sp,
+                                    color = SleekTextSub,
+                                    modifier = Modifier.padding(end = 8.dp)
+                                )
+                            }
+                        }
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        TextField(
+                            value = replaceQuery,
+                            onValueChange = { replaceQuery = it },
+                            placeholder = { Text("Replace with ...", fontSize = 12.sp) },
+                            colors = TextFieldDefaults.colors(
+                                unfocusedContainerColor = Color.White,
+                                focusedContainerColor = Color.White,
+                                unfocusedIndicatorColor = Color.Transparent,
+                                focusedIndicatorColor = Color.Transparent
+                            ),
+                            singleLine = true,
+                            modifier = Modifier.weight(1f).height(48.dp),
+                            shape = RoundedCornerShape(8.dp)
+                        )
+                        Button(
+                            onClick = {
+                                if (searchQuery.isNotEmpty()) {
+                                    rawText = rawText.replace(searchQuery, replaceQuery)
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = SleekFolderText),
+                            shape = RoundedCornerShape(8.dp),
+                            contentPadding = PaddingValues(horizontal = 12.dp)
+                        ) {
+                            Text("Replace All", fontWeight = FontWeight.Bold)
                         }
                     }
                 }

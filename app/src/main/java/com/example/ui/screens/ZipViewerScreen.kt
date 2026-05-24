@@ -42,30 +42,42 @@ fun ZipViewerScreen(
     var isExtracting by remember { mutableStateOf(false) }
     var extractionRatio by remember { mutableStateOf(0f) }
     var previewEntry by remember { mutableStateOf<Pair<String, String>?>(null) } // Name to contents
-
+    var editingFile by remember { mutableStateOf<File?>(null) }
+    var editingEntryName by remember { mutableStateOf<String?>(null) }
+    var renameEntry by remember { mutableStateOf<ZipEntryInfo?>(null) }
+    var renameText by remember { mutableStateOf("") }
+    
     val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+    val context = androidx.compose.ui.platform.LocalContext.current
+
+    val refreshZipEntries: () -> Unit = {
+        scope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            try {
+                if (file.exists() && file.isFile) {
+                    ZipFile(file).use { zip ->
+                        val list = zip.entries().asSequence().map { entry ->
+                            ZipEntryInfo(
+                                name = entry.name,
+                                size = entry.size,
+                                compressedSize = entry.compressedSize,
+                                isDirectory = entry.isDirectory
+                            )
+                        }.toList()
+                        entries = list
+                    }
+                }
+            } catch (e: Exception) {
+                snackbarHostState.showSnackbar("Failed to open Zip archive: ${e.localizedMessage}")
+            } finally {
+                isLoading = false
+            }
+        }
+    }
 
     LaunchedEffect(file) {
         isLoading = true
-        try {
-            if (file.exists() && file.isFile) {
-                ZipFile(file).use { zip ->
-                    val list = zip.entries().asSequence().map { entry ->
-                        ZipEntryInfo(
-                            name = entry.name,
-                            size = entry.size,
-                            compressedSize = entry.compressedSize,
-                            isDirectory = entry.isDirectory
-                        )
-                    }.toList()
-                    entries = list
-                }
-            }
-        } catch (e: Exception) {
-            snackbarHostState.showSnackbar("Failed to open Zip archive: ${e.localizedMessage}")
-        } finally {
-            isLoading = false
-        }
+        refreshZipEntries()
     }
 
     val extractZip: (Boolean, String?) -> Unit = { extractAll, singleName ->
@@ -215,47 +227,33 @@ fun ZipViewerScreen(
                             entry = entry,
                             onPreview = {
                                 try {
+                                    val tempFile = File(context.cacheDir, "temp_zip_${System.currentTimeMillis()}_${File(entry.name).name}")
                                     ZipFile(file).use { zip ->
                                         val rentry = zip.getEntry(entry.name)
                                         if (rentry != null) {
-                                            val textContent = zip.getInputStream(rentry).use { input ->
-                                                val maxBytes = 128 * 1024
-                                                val bytes = input.readNBytes(maxBytes)
-                                                var result = String(bytes, Charsets.UTF_8)
-                                                if (rentry.size > maxBytes) {
-                                                    result += "\n\n--- [PREVIEW TRUNCATED FOR PERFORMANCE: Showing first 128 KB only] ---"
+                                            zip.getInputStream(rentry).use { input ->
+                                                FileOutputStream(tempFile).use { output ->
+                                                    input.copyTo(output)
                                                 }
-                                                result
                                             }
-                                            previewEntry = Pair(entry.name, textContent)
                                         }
                                     }
-                                } catch (_: Exception) {
-                                }
+                                    editingEntryName = entry.name
+                                    editingFile = tempFile
+                                } catch (_: Exception) {}
                             },
                             onExtract = {
                                 extractZip(false, entry.name)
                             },
+                            onRename = {
+                                renameEntry = entry
+                                renameText = entry.name
+                            },
                             onDelete = {
-                                kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+                                scope.launch(kotlinx.coroutines.Dispatchers.IO) {
                                     val success = ZipHelper.removeEntry(file, entry.name)
                                     if (success) {
-                                        // Refetch zip entries
-                                        try {
-                                            if (file.exists() && file.isFile) {
-                                                ZipFile(file).use { zip ->
-                                                    val list = zip.entries().asSequence().map { e ->
-                                                        ZipEntryInfo(
-                                                            name = e.name,
-                                                            size = e.size,
-                                                            compressedSize = e.compressedSize,
-                                                            isDirectory = e.isDirectory
-                                                        )
-                                                    }.toList()
-                                                    entries = list
-                                                }
-                                            }
-                                        } catch (e: Exception) {}
+                                        refreshZipEntries()
                                     }
                                 }
                             }
@@ -272,38 +270,55 @@ fun ZipViewerScreen(
                 )
             }
 
-            previewEntry?.let { (name, text) ->
+            renameEntry?.let { targetEntry ->
                 AlertDialog(
-                    onDismissRequest = { previewEntry = null },
-                    title = { Text(name, fontSize = 16.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis, color = SleekTextMain) },
+                    onDismissRequest = { renameEntry = null },
+                    title = { Text("Rename Entry", color = SleekTextMain) },
                     text = {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .heightIn(max = 300.dp)
-                                .background(SleekBg, RoundedCornerShape(12.dp))
-                                .padding(12.dp)
-                                .verticalScroll(rememberScrollState())
-                        ) {
-                            Text(
-                                text = text,
-                                fontFamily = FontFamily.Monospace,
-                                fontSize = 12.sp,
-                                color = SleekTextAlt
-                            )
-                        }
+                        OutlinedTextField(
+                            value = renameText,
+                            onValueChange = { renameText = it },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true
+                        )
                     },
                     confirmButton = {
-                        Button(
-                            onClick = { previewEntry = null },
-                            colors = ButtonDefaults.buttonColors(containerColor = SleekFolderBg, contentColor = SleekFolderText)
-                        ) {
-                            Text("Dismiss", fontWeight = FontWeight.Bold)
+                        Button(onClick = {
+                            scope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                                val success = ZipHelper.renameEntry(file, targetEntry.name, renameText)
+                                if (success) {
+                                    refreshZipEntries()
+                                }
+                                renameEntry = null
+                            }
+                        }) {
+                            Text("Save")
                         }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { renameEntry = null }) { Text("Cancel") }
                     }
                 )
             }
         }
+    }
+
+    if (editingFile != null && editingEntryName != null) {
+        CodeEditorScreen(
+            file = editingFile!!,
+            onBack = {
+                scope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                    try {
+                        val content = editingFile!!.readBytes()
+                        ZipHelper.addOrUpdateEntry(file, editingEntryName!!, content)
+                        editingFile!!.delete()
+                        refreshZipEntries()
+                    } catch (e: Exception) { }
+                    editingFile = null
+                    editingEntryName = null
+                }
+            }
+        )
     }
 }
 
@@ -312,6 +327,7 @@ fun ZipEntryRow(
     entry: ZipEntryInfo,
     onPreview: () -> Unit,
     onExtract: () -> Unit,
+    onRename: () -> Unit,
     onDelete: () -> Unit
 ) {
     Card(
@@ -381,6 +397,10 @@ fun ZipEntryRow(
                 IconButton(onClick = onExtract) {
                     Icon(Icons.Default.Download, contentDescription = "Extract Single File", tint = SleekCodeText)
                 }
+            }
+
+            IconButton(onClick = onRename) {
+                Icon(Icons.Default.Edit, contentDescription = "Rename Entry", tint = SleekFolderText)
             }
 
             IconButton(onClick = onDelete) {

@@ -268,11 +268,11 @@ object SvgConverter {
 
     private fun parseComposeColor(colorStr: String): Color {
         val hex = convertColorToHex(colorStr)
-        if (hex.startsWith("#")) {
-            val unsignedHex = hex.removePrefix("#").toLong(16)
-            return Color(unsignedHex)
+        try {
+            return Color(android.graphics.Color.parseColor(hex))
+        } catch (e: Exception) {
+            return Color.Transparent
         }
-        return Color.Transparent
     }
 
     /**
