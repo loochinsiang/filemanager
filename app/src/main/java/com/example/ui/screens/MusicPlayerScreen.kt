@@ -30,6 +30,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ui.theme.*
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import android.media.MediaExtractor
+import android.media.MediaCodec
+import android.media.MediaFormat
 import java.io.File
 import java.util.Locale
 
@@ -62,43 +67,18 @@ fun MusicPlayerScreen(
     var reverbAmount by remember { mutableStateOf(15f) } // 0% - 100%
     var limiterDb by remember { mutableStateOf(0f) } // -24 dB to 0 dB
 
-    // Decode actual waveform of the audio file dynamically via relative local bytes read method
-    val actualWaveform = remember(file) {
-        val barsCount = 36
-        val amplitudes = FloatArray(barsCount) { 0.15f }
-        try {
-            val length = file.length()
-            if (length > 0) {
-                file.inputStream().use { stream ->
-                    val blockSize = (length / barsCount).coerceAtLeast(1)
-                    val buffer = ByteArray(256)
-                    for (i in 0 until barsCount) {
-                        try {
-                            stream.channel.position(i * blockSize)
-                            val bytesRead = stream.read(buffer)
-                            if (bytesRead > 0) {
-                                var sum = 0.0
-                                for (j in 0 until bytesRead step 2) {
-                                    if (j + 1 < bytesRead) {
-                                        val sample = ((buffer[j + 1].toInt() shl 8) or (buffer[j].toInt() and 0xFF)).toShort()
-                                        sum += kotlin.math.abs(sample.toDouble())
-                                    }
-                                }
-                                val avg = sum / (bytesRead / 2)
-                                amplitudes[i] = (avg / 32768.0).toFloat().coerceIn(0.12f, 0.95f)
-                            }
-                        } catch (_: Exception) {}
-                    }
-                }
-            }
-        } catch (_: Exception) {}
-        // Safe fallbacks for visualization
-        if (amplitudes.all { it == 0.15f }) {
-            for (i in 0 until barsCount) {
-                amplitudes[i] = (kotlin.math.sin(i * 0.45f) * 0.35f + 0.5f).coerceIn(0.12f, 0.95f)
+    var actualWaveform by remember { mutableStateOf(FloatArray(36) { 0.15f }) }
+    var isDecodingWaveform by remember { mutableStateOf(false) }
+
+    LaunchedEffect(file) {
+        isDecodingWaveform = true
+        withContext(Dispatchers.IO) {
+            val decoded = extractRealWaveform(file)
+            withContext(Dispatchers.Main) {
+                actualWaveform = decoded
+                isDecodingWaveform = false
             }
         }
-        amplitudes
     }
 
     // Detected BPM based on Differential Transient Peak Changes
@@ -595,4 +575,108 @@ fun MusicPlayerScreen(
             Spacer(Modifier.height(40.dp))
         }
     }
+}
+
+private fun extractRealWaveform(file: File, barsCount: Int = 36): FloatArray {
+    val amplitudes = FloatArray(barsCount) { 0.15f }
+    val extractor = MediaExtractor()
+    var codec: MediaCodec? = null
+    try {
+        extractor.setDataSource(file.absolutePath)
+        var trackIndex = -1
+        var format: MediaFormat? = null
+        for (i in 0 until extractor.trackCount) {
+            val f = extractor.getTrackFormat(i)
+            val mime = f.getString(MediaFormat.KEY_MIME) ?: ""
+            if (mime.startsWith("audio/")) {
+                trackIndex = i
+                format = f
+                break
+            }
+        }
+        if (trackIndex >= 0 && format != null) {
+            val mime = format.getString(MediaFormat.KEY_MIME)!!
+            val durationUs = format.getLong(MediaFormat.KEY_DURATION)
+            extractor.selectTrack(trackIndex)
+            
+            codec = MediaCodec.createDecoderByType(mime)
+            codec.configure(format, null, null, 0)
+            codec.start()
+            
+            val info = MediaCodec.BufferInfo()
+            
+            for (step in 0 until barsCount) {
+                val targetUs = (step * durationUs) / barsCount
+                extractor.seekTo(targetUs, MediaExtractor.SEEK_TO_CLOSEST_SYNC)
+                
+                var amplitudeSum = 0f
+                var samplesCount = 0
+                var decoded = false
+                var attempts = 0
+                
+                while (!decoded && attempts < 10) {
+                    attempts++
+                    val inputIndex = codec.dequeueInputBuffer(3000)
+                    if (inputIndex >= 0) {
+                        val inputBuffer = codec.getInputBuffer(inputIndex)
+                        if (inputBuffer != null) {
+                            inputBuffer.clear()
+                            val sampleSize = extractor.readSampleData(inputBuffer, 0)
+                            if (sampleSize >= 0) {
+                                codec.queueInputBuffer(inputIndex, 0, sampleSize, extractor.sampleTime, 0)
+                                extractor.advance()
+                            } else {
+                                codec.queueInputBuffer(inputIndex, 0, 0, 0, MediaCodec.BUFFER_FLAG_END_OF_STREAM)
+                            }
+                        }
+                    }
+                    
+                    val outputIndex = codec.dequeueOutputBuffer(info, 3000)
+                    if (outputIndex >= 0) {
+                        val outputBuffer = codec.getOutputBuffer(outputIndex)
+                        if (outputBuffer != null) {
+                            val shortBuffer = outputBuffer.asShortBuffer()
+                            val limit = shortBuffer.remaining()
+                            var sum = 0.0
+                            var localCount = 0
+                            val stepSize = (limit / 128).coerceAtLeast(1)
+                            for (j in 0 until limit step stepSize) {
+                                val sample = shortBuffer.get(j)
+                                sum += kotlin.math.abs(sample.toDouble())
+                                localCount++
+                            }
+                            if (localCount > 0) {
+                                amplitudeSum = (sum / localCount).toFloat()
+                                samplesCount = localCount
+                                decoded = true
+                            }
+                        }
+                        codec.releaseOutputBuffer(outputIndex, false)
+                    }
+                }
+                
+                if (decoded && samplesCount > 0) {
+                    val normalized = (amplitudeSum / 32768f).coerceIn(0.12f, 0.95f)
+                    amplitudes[step] = normalized
+                } else {
+                    val calc = (kotlin.math.sin(step * 0.45f) * 0.35f + 0.5f).toFloat()
+                    amplitudes[step] = calc.coerceIn(0.12f, 0.95f)
+                }
+            }
+        }
+    } catch (e: Exception) {
+        for (step in 0 until barsCount) {
+            val calc = (kotlin.math.sin(step * 0.45f) * 0.35f + 0.5f).toFloat()
+            amplitudes[step] = calc.coerceIn(0.12f, 0.95f)
+        }
+    } finally {
+        try {
+            codec?.stop()
+            codec?.release()
+        } catch (_: Exception) {}
+        try {
+            extractor.release()
+        } catch (_: Exception) {}
+    }
+    return amplitudes
 }

@@ -45,6 +45,9 @@ class MainActivity : ComponentActivity() {
                 
                 val isPermissionGranted by hasStoragePermissionVal
                 var currentScreen by remember { mutableStateOf<ScreenState>(ScreenState.Main) }
+                
+                // Preserve file explorer's directory state across screen switches (e.g., when back handling)
+                var currentDirectory by remember { mutableStateOf(Environment.getExternalStorageDirectory()) }
 
                 // Track first-time Welcome screen dismiss state
                 val sharedPrefs = remember { context.getSharedPreferences("app_prefs", android.content.Context.MODE_PRIVATE) }
@@ -80,37 +83,40 @@ class MainActivity : ComponentActivity() {
                             when (targetScreen) {
                                 is ScreenState.Main -> {
                                     MainFileManagerScreen(
-                                    phoneRoot = Environment.getExternalStorageDirectory(),
-                                    hasStoragePermission = isPermissionGranted,
-                                    onRequestStoragePermission = { requestStorageAccess() },
-                                    onOpenFile = { targetFile, mode ->
-                                        currentScreen = when (mode) {
-                                            "editor" -> ScreenState.CodeEditor(targetFile)
-                                            "zip" -> ScreenState.ZipViewer(targetFile)
-                                            "image" -> ScreenState.ImageViewer(targetFile)
-                                            "sound" -> ScreenState.MusicPlayer(targetFile)
-                                            "hex" -> ScreenState.HexEditor(targetFile)
-                                            else -> ScreenState.CodeEditor(targetFile)
+                                        phoneRoot = Environment.getExternalStorageDirectory(),
+                                        currentDirectory = currentDirectory,
+                                        onDirectoryChange = { currentDirectory = it },
+                                        hasStoragePermission = isPermissionGranted,
+                                        onRequestStoragePermission = { requestStorageAccess() },
+                                        onOpenFile = { targetFile, mode ->
+                                            currentScreen = when (mode) {
+                                                "editor" -> ScreenState.CodeEditor(targetFile)
+                                                "zip" -> ScreenState.ZipViewer(targetFile)
+                                                "image" -> ScreenState.ImageViewer(targetFile)
+                                                "sound" -> ScreenState.MusicPlayer(targetFile)
+                                                "hex" -> ScreenState.HexEditor(targetFile)
+                                                else -> ScreenState.CodeEditor(targetFile)
+                                            }
                                         }
-                                    }
-                                )
-                            }
-                            is ScreenState.CodeEditor -> {
-                                CodeEditorScreen(
-                                    file = targetScreen.file,
-                                    onBack = { currentScreen = ScreenState.Main }
-                                )
-                            }
-                            is ScreenState.ZipViewer -> {
-                                ZipViewerScreen(
-                                    file = targetScreen.file,
-                                    onBack = { currentScreen = ScreenState.Main },
-                                    onNavigateToExtracted = { extractedDir ->
-                                        // Navigate file explorer itself into the extracted result folder!
-                                        currentScreen = ScreenState.Main
-                                    }
-                                )
-                            }
+                                    )
+                                }
+                                is ScreenState.CodeEditor -> {
+                                    CodeEditorScreen(
+                                        file = targetScreen.file,
+                                        onBack = { currentScreen = ScreenState.Main }
+                                    )
+                                }
+                                is ScreenState.ZipViewer -> {
+                                    ZipViewerScreen(
+                                        file = targetScreen.file,
+                                        onBack = { currentScreen = ScreenState.Main },
+                                        onNavigateToExtracted = { extractedDir ->
+                                            // Navigate file explorer itself into the extracted result folder!
+                                            currentDirectory = extractedDir
+                                            currentScreen = ScreenState.Main
+                                        }
+                                    )
+                                }
                             is ScreenState.ImageViewer -> {
                                 ImageViewerScreen(
                                     file = targetScreen.file,

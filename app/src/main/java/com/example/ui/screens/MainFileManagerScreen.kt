@@ -43,13 +43,14 @@ enum class MainTab {
 @Composable
 fun MainFileManagerScreen(
     phoneRoot: File,
+    currentDirectory: File,
+    onDirectoryChange: (File) -> Unit,
     hasStoragePermission: Boolean,
     onRequestStoragePermission: () -> Unit,
     onOpenFile: (File, String) -> Unit, // file and "editor" | "zip" | "image" | "sound" | "hex"
     modifier: Modifier = Modifier
 ) {
     var activeTab by remember { mutableStateOf(MainTab.FILES) }
-    var currentDirectory by remember { mutableStateOf(phoneRoot) }
     var showPermissionExplainer by remember { mutableStateOf(false) }
     
     val activeRoot = phoneRoot
@@ -85,11 +86,7 @@ fun MainFileManagerScreen(
         fileList = files.sortedWith(compareBy({ !it.isDirectory }, { it.name.lowercase(Locale.ROOT) }))
     }
 
-    LaunchedEffect(hasStoragePermission) {
-        if (hasStoragePermission && currentDirectory.absolutePath != phoneRoot.absolutePath) {
-            currentDirectory = phoneRoot
-        }
-    }
+
 
     LaunchedEffect(hasStoragePermission, currentDirectory) {
         refreshFilesList()
@@ -193,7 +190,7 @@ fun MainFileManagerScreen(
                             BreadcrumbsRow(
                                 root = activeRoot,
                                 current = currentDirectory,
-                                onBreadcrumbClick = { currentDirectory = it }
+                                onBreadcrumbClick = { onDirectoryChange(it) }
                             )
                         }
                     }
@@ -578,7 +575,7 @@ fun MainFileManagerScreen(
                                                 file = file,
                                                 onClick = {
                                                     if (file.isDirectory) {
-                                                        currentDirectory = file
+                                                        onDirectoryChange(file)
                                                     } else {
                                                         addRecentFile(context, file)
                                                         val ext = file.extension.lowercase(Locale.ROOT)
