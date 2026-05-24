@@ -267,7 +267,7 @@ fun CodeEditorScreen(
                         val horizontalScrollState = rememberScrollState()
                         val lineCount = rawText.count { it == '\n' } + 1
 
-                        // Line numbers
+                        // Line numbers - optimized to join into a single Text to avoid creating thousands of Text composables
                         Column(
                             modifier = Modifier
                                 .fillMaxHeight()
@@ -277,17 +277,18 @@ fun CodeEditorScreen(
                                 .padding(vertical = 12.dp, horizontal = 4.dp),
                             horizontalAlignment = Alignment.End
                         ) {
-                            for (i in 1..lineCount) {
-                                Text(
-                                    text = i.toString(),
-                                    style = TextStyle(
-                                        fontFamily = FontFamily.Monospace,
-                                        fontSize = scaleFactor,
-                                        color = Color.Gray.copy(alpha = 0.6f)
-                                    ),
-                                    modifier = Modifier.padding(bottom = 2.dp)
-                                )
+                            val lineNumbersText = remember(lineCount) {
+                                (1..lineCount).joinToString("\n")
                             }
+                            Text(
+                                text = lineNumbersText,
+                                style = TextStyle(
+                                    fontFamily = FontFamily.Monospace,
+                                    fontSize = scaleFactor,
+                                    lineHeight = (scaleFactor.value * 1.35f).sp,
+                                    color = Color.Gray.copy(alpha = 0.6f)
+                                )
+                            )
                         }
 
                         // Code Edit area
@@ -305,6 +306,7 @@ fun CodeEditorScreen(
                                 textStyle = TextStyle(
                                     fontFamily = FontFamily.Monospace,
                                     fontSize = scaleFactor,
+                                    lineHeight = (scaleFactor.value * 1.35f).sp,
                                     color = Color(0xFFE2E1E6)
                                 ),
                                 cursorBrush = SolidColor(Color.White),
@@ -490,6 +492,10 @@ class CodeSyntaxTransformation(private val language: String) : VisualTransformat
 }
 
 fun highlightCodeTokens(code: String, language: String): AnnotatedString {
+    // Skip regex syntax highlighting for files > 20KB to ensure smooth 60fps scrolling and prevent OOM/ANR crashes
+    if (code.length > 20480) {
+        return AnnotatedString(code)
+    }
     val builder = AnnotatedString.Builder(code)
 
     val keywordColor = Color(0xFFC792EA)   // Lavender

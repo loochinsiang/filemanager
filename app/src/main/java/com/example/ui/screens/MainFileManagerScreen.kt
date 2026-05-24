@@ -1,5 +1,8 @@
 package com.example.ui.screens
 
+import android.content.Intent
+import android.widget.Toast
+import androidx.core.content.FileProvider
 import android.os.StatFs
 import androidx.compose.animation.*
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -89,6 +92,9 @@ fun MainFileManagerScreen(
             ext == "svg" -> onOpenFile(file, "editor")
             ext in listOf("wav", "mp3", "m4a", "ogg") -> onOpenFile(file, "sound")
             ext == "bin" || ext == "hex" -> onOpenFile(file, "hex")
+            ext == "apk" -> {
+                installApk(context, file)
+            }
             else -> {
                 if (isBinaryFile(file)) {
                     binaryChoiceFile = file
@@ -862,6 +868,27 @@ fun MainFileManagerScreen(
                     },
                     leadingIcon = { Icon(Icons.Default.Code, contentDescription = null, tint = SleekTextSub) }
                 )
+                if (item.isFile) {
+                    if (item.extension.lowercase(Locale.ROOT) == "apk") {
+                        DropdownMenuItem(
+                            text = { Text("Install APK Package", color = SleekFolderText, fontWeight = FontWeight.Bold) },
+                            onClick = {
+                                activeItemActions = null
+                                installApk(context, item)
+                            },
+                            leadingIcon = { Icon(Icons.Default.Download, contentDescription = null, tint = SleekFolderText) }
+                        )
+                    }
+
+                    DropdownMenuItem(
+                        text = { Text("Download / Save to Downloads", color = SleekTextMain, fontWeight = FontWeight.Medium) },
+                        onClick = {
+                            activeItemActions = null
+                            downloadFileToPublicDownloads(context, item)
+                        },
+                        leadingIcon = { Icon(Icons.Default.FileDownload, contentDescription = null, tint = SleekTextSub) }
+                    )
+                }
                 HorizontalDivider(color = SleekBorderLight)
                 DropdownMenuItem(
                     text = { Text("Secure Delete", color = Color(0xFFBA1A1A), fontWeight = FontWeight.Bold) },
@@ -1416,4 +1443,49 @@ fun isBinaryFile(file: File): Boolean {
         }
     } catch (_: Exception) {}
     return false
+}
+
+fun installApk(context: android.content.Context, file: File) {
+    try {
+        val authority = "${context.packageName}.fileprovider"
+        val apkUri = FileProvider.getUriForFile(context, authority, file)
+        val intent = Intent(Intent.ACTION_VIEW).apply {
+            setDataAndType(apkUri, "application/vnd.android.package-archive")
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        context.startActivity(intent)
+    } catch (e: Exception) {
+        Toast.makeText(context, "Error launching installer: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+    }
+}
+
+fun downloadFileToPublicDownloads(context: android.content.Context, file: File) {
+    try {
+        val downloadsDir = android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS)
+        if (!downloadsDir.exists()) {
+            downloadsDir.mkdirs()
+        }
+        val targetFile = File(downloadsDir, file.name)
+        file.inputStream().use { input ->
+            targetFile.outputStream().use { output ->
+                input.copyTo(output)
+            }
+        }
+        Toast.makeText(context, "Downloaded to public Downloads: ${targetFile.absolutePath}", Toast.LENGTH_LONG).show()
+    } catch (e: Exception) {
+        // Fallback: Trigger share intent
+        try {
+            val authority = "${context.packageName}.fileprovider"
+            val fileUri = FileProvider.getUriForFile(context, authority, file)
+            val intent = Intent(Intent.ACTION_SEND).apply {
+                type = "*/*"
+                putExtra(Intent.EXTRA_STREAM, fileUri)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            context.startActivity(Intent.createChooser(intent, "Share / Save File"))
+        } catch (ex: Exception) {
+            Toast.makeText(context, "Action failed: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+        }
+    }
 }
