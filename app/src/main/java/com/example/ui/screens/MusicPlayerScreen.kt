@@ -126,10 +126,15 @@ fun MusicPlayerScreen(
             }
             override fun onPlaybackStateChanged(playbackState: Int) {
                 if (playbackState == Player.STATE_READY) {
-                    durationMs = exoPlayer.duration
-                    val m = (durationMs / 1000) / 60
-                    val s = (durationMs / 1000) % 60
-                    totalTimeLabel = String.format(Locale.ROOT, "%02d:%02d", m, s)
+                    try {
+                        val duration = exoPlayer.duration
+                        if (duration > 0) {
+                            durationMs = duration
+                            val m = (durationMs / 1000) / 60
+                            val s = (durationMs / 1000) % 60
+                            totalTimeLabel = String.format(Locale.ROOT, "%02d:%02d", m, s)
+                        }
+                    } catch (_: Exception) {}
                     
                     // Attach AudioFX
                     try {

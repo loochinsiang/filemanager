@@ -26,6 +26,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 import androidx.compose.ui.unit.IntOffset
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
@@ -55,42 +56,60 @@ fun MiniAudioPlayer(
             .offset { IntOffset(0, dragOffsetY.value.toInt()) }
             .alpha((1f - (dragOffsetY.value / 200f)).coerceIn(0f, 1f))
             .pointerInput(Unit) {
-                detectVerticalDragGestures(
-                    onVerticalDrag = { change, dragAmount ->
-                        change.consume()
-                        dragOffsetY.value = (dragOffsetY.value + dragAmount).coerceIn(-120f, 300f)
-                    },
-                    onDragEnd = {
-                        val currentOffset = dragOffsetY.value
-                        if (currentOffset > 100f) {
-                            dragOffsetY.value = 0f
-                            currentOnClose()
-                        } else if (currentOffset < -30f) {
-                            dragOffsetY.value = 0f
-                            currentOnClick()
-                        } else {
-                            coroutineScope.launch {
-                                try {
-                                    androidx.compose.animation.core.animate(
-                                        initialValue = dragOffsetY.value,
-                                        targetValue = 0f
-                                    ) { value, _ ->
-                                        dragOffsetY.value = value
+                try {
+                    detectVerticalDragGestures(
+                        onVerticalDrag = { change, dragAmount ->
+                            try {
+                                change.consume()
+                                dragOffsetY.value = (dragOffsetY.value + dragAmount).coerceIn(-120f, 300f)
+                            } catch (_: Exception) {}
+                        },
+                        onDragEnd = {
+                            val currentOffset = dragOffsetY.value
+                            if (currentOffset > 100f) {
+                                coroutineScope.launch {
+                                    try {
+                                        dragOffsetY.value = 0f
+                                        delay(50) // let pointer input sequence finish comfortably
+                                        currentOnClose()
+                                    } catch (_: Exception) {}
+                                }
+                            } else if (currentOffset < -30f) {
+                                coroutineScope.launch {
+                                    try {
+                                        dragOffsetY.value = 0f
+                                        delay(50) // let pointer input sequence finish comfortably
+                                        currentOnClick()
+                                    } catch (_: Exception) {}
+                                }
+                            } else {
+                                coroutineScope.launch {
+                                    try {
+                                        androidx.compose.animation.core.animate(
+                                            initialValue = dragOffsetY.value,
+                                            targetValue = 0f
+                                        ) { value, _ ->
+                                            dragOffsetY.value = value
+                                        }
+                                    } catch (e: Exception) {
+                                        dragOffsetY.value = 0f
                                     }
-                                } catch (e: Exception) {
-                                    dragOffsetY.value = 0f
                                 }
                             }
+                        },
+                        onDragCancel = {
+                            dragOffsetY.value = 0f
                         }
-                    },
-                    onDragCancel = {
-                        dragOffsetY.value = 0f
-                    }
-                )
+                    )
+                } catch (_: Exception) {}
             }
             .clip(RoundedCornerShape(32.dp))
             .background(containerBg)
-            .clickable { onClick() }
+            .clickable {
+                try {
+                    onClick()
+                } catch (_: Exception) {}
+            }
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,

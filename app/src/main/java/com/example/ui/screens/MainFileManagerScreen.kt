@@ -968,7 +968,7 @@ fun MainFileManagerScreen(
                         )
                     }
 
-                    val quickActions = remember {
+                    val quickActions = remember(currentLanguageDisplay, isChanging) {
                         listOf(
                             SettingsQuickAction(
                                 icon = Icons.Default.History,
@@ -976,6 +976,17 @@ fun MainFileManagerScreen(
                                 accentColor = Color(0xFF007DF0),
                                 onClick = {
                                     onOpenFile(java.io.File(""), "changelog")
+                                }
+                            ),
+                            SettingsQuickAction(
+                                icon = Icons.Default.Translate,
+                                label = "Language",
+                                subtitle = if (isChanging) "Changing..." else currentLanguageDisplay,
+                                accentColor = Color(0xFFE040FB),
+                                onClick = {
+                                    if (!isChanging) {
+                                        showLanguageSelector = true
+                                    }
                                 }
                             ),
                             SettingsQuickAction(
@@ -1023,17 +1034,6 @@ fun MainFileManagerScreen(
                                         subtitle = "v1.3.1 - Expressive",
                                         accentColor = SleekTextAlt,
                                         onClick = {}
-                                    ),
-                                    SettingsItem(
-                                        icon = Icons.Default.Translate,
-                                        title = context.getString(com.example.R.string.language),
-                                        subtitle = if (isChanging) "Changing language..." else currentLanguageDisplay,
-                                        accentColor = SleekFolderText,
-                                        onClick = {
-                                            if (!isChanging) {
-                                                showLanguageSelector = true
-                                            }
-                                        }
                                     ),
                                     SettingsItem(
                                         icon = Icons.Default.Storage,

@@ -38,6 +38,7 @@ data class SettingsQuickAction(
     val label: String,
     val onClick: () -> Unit,
     val accentColor: Color,
+    val subtitle: String? = null,
 )
 
 data class SettingsGroup(
