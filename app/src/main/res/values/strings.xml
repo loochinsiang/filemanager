@@ -38,4 +38,10 @@
     <string name="filter_archives">Archives</string>
     <string name="filter_images">Images</string>
     <string name="active_device_storage">Active Device Storage</string>
+    <string name="title_access_denied">Access Denied</string>
+    <string name="msg_access_denied_shizuku">Due to new system limitations, you cannot access this folder directly. Download Shizuku to view.</string>
+    <string name="msg_elements">%1$d elements</string>
+    <string name="msg_recent_elements">Recently opened file elements</string>
+    <string name="menu_rename_entry">Rename Entry</string>
+    <string name="title_permission_denied">Permission Access Denied</string>
 </resources>

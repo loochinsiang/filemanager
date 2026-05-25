@@ -178,7 +178,8 @@ fun MainFileManagerScreen(
     }
 
     // Storage estimation metrics
-    val storageMetrics = remember(hasStoragePermission, fileList, currentDirectory) {
+    val permissionDeniedMsg = androidx.compose.ui.res.stringResource(com.example.R.string.title_permission_denied)
+    val storageMetrics = remember(hasStoragePermission, fileList, currentDirectory, permissionDeniedMsg) {
         if (hasStoragePermission) {
             try {
                 val stat = StatFs(phoneRoot.path)
@@ -199,7 +200,7 @@ fun MainFileManagerScreen(
                 Pair("Phone Storage Enabled", 0.5f)
             }
         } else {
-            Pair("Permission Access Denied", 0f)
+            Pair(permissionDeniedMsg, 0f)
         }
     }
 
@@ -360,7 +361,7 @@ fun MainFileManagerScreen(
                                     letterSpacing = (-0.5).sp
                                 )
                                 Text(
-                                    text = "Recently opened file elements",
+                                    text = androidx.compose.ui.res.stringResource(com.example.R.string.msg_recent_elements),
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Medium,
                                     color = SleekTextSub,
@@ -702,7 +703,7 @@ fun MainFileManagerScreen(
                                     ) {
                                         androidx.compose.material3.LoadingIndicator(color = SleekFolderText)
                                         Spacer(Modifier.height(12.dp))
-                                        Text("Loading directory...", color = SleekTextSub, style = MaterialTheme.typography.bodyMedium)
+                                        Text(androidx.compose.ui.res.stringResource(com.example.R.string.msg_loading_dir), color = SleekTextSub, style = MaterialTheme.typography.bodyMedium)
                                     }
                                 } else if (currentDirectory.absolutePath.endsWith("Android/data", ignoreCase = true)) {
                                     Column(
@@ -717,9 +718,9 @@ fun MainFileManagerScreen(
                                             modifier = Modifier.size(64.dp)
                                         )
                                         Spacer(Modifier.height(16.dp))
-                                        Text("Access Denied", color = SleekTextMain, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                                        Text(androidx.compose.ui.res.stringResource(com.example.R.string.title_access_denied), color = SleekTextMain, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                                         Spacer(Modifier.height(8.dp))
-                                        Text("Due to new system limitations, you cannot access this folder directly. Download Shizuku to view.", color = SleekTextSub, style = MaterialTheme.typography.bodyMedium, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                                        Text(androidx.compose.ui.res.stringResource(com.example.R.string.msg_access_denied_shizuku), color = SleekTextSub, style = MaterialTheme.typography.bodyMedium, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                                     }
                                 } else if (filteredFiles.isEmpty()) {
                                     Column(
@@ -803,8 +804,8 @@ fun MainFileManagerScreen(
                                 tint = SleekTextSub.copy(alpha = 0.5f)
                             )
                             Spacer(Modifier.height(16.dp))
-                            Text("No Recent History", fontWeight = FontWeight.Bold, color = SleekTextMain)
-                            Text("Files you open or view will appear here for fast access.", color = SleekTextSub, fontSize = 13.sp, modifier = Modifier.padding(top = 4.dp))
+                            Text(androidx.compose.ui.res.stringResource(com.example.R.string.msg_no_recent), fontWeight = FontWeight.Bold, color = SleekTextMain)
+                            Text(androidx.compose.ui.res.stringResource(com.example.R.string.msg_no_recent_desc), color = SleekTextSub, fontSize = 13.sp, modifier = Modifier.padding(top = 4.dp))
                         }
                     } else {
                         LazyColumn(
@@ -970,7 +971,7 @@ fun MainFileManagerScreen(
                 )
 
                 DropdownMenuItem(
-                    text = { Text("Rename Element", color = SleekTextMain, fontWeight = FontWeight.Medium) },
+                    text = { Text(androidx.compose.ui.res.stringResource(com.example.R.string.menu_rename), color = SleekTextMain, fontWeight = FontWeight.Medium) },
                     onClick = {
                         activeItemActions = null
                         showRenameDialog = item
@@ -978,7 +979,7 @@ fun MainFileManagerScreen(
                     leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null, tint = SleekTextSub) }
                 )
                 DropdownMenuItem(
-                    text = { Text("Duplicate Resource", color = SleekTextMain, fontWeight = FontWeight.Medium) },
+                    text = { Text(androidx.compose.ui.res.stringResource(com.example.R.string.menu_duplicate), color = SleekTextMain, fontWeight = FontWeight.Medium) },
                     onClick = {
                         activeItemActions = null
                         try {
@@ -993,7 +994,7 @@ fun MainFileManagerScreen(
                     leadingIcon = { Icon(Icons.Default.ContentCopy, contentDescription = null, tint = SleekTextSub) }
                 )
                 DropdownMenuItem(
-                    text = { Text("View Detailed Metadata", color = SleekTextMain, fontWeight = FontWeight.Medium) },
+                    text = { Text(androidx.compose.ui.res.stringResource(com.example.R.string.menu_details), color = SleekTextMain, fontWeight = FontWeight.Medium) },
                     onClick = {
                         activeItemActions = null
                         showDetailsDialog = item
@@ -1001,7 +1002,7 @@ fun MainFileManagerScreen(
                     leadingIcon = { Icon(Icons.Default.Info, contentDescription = null, tint = SleekTextSub) }
                 )
                 DropdownMenuItem(
-                    text = { Text("Inspect Raw HEX Bytes", color = SleekTextMain, fontWeight = FontWeight.Medium) },
+                    text = { Text(androidx.compose.ui.res.stringResource(com.example.R.string.menu_hex), color = SleekTextMain, fontWeight = FontWeight.Medium) },
                     onClick = {
                         activeItemActions = null
                         onOpenFile(item, "hex")
@@ -1011,7 +1012,7 @@ fun MainFileManagerScreen(
                 if (item.isFile) {
                     if (item.extension.lowercase(Locale.ROOT) == "apk") {
                         DropdownMenuItem(
-                            text = { Text("Install APK Package", color = SleekFolderText, fontWeight = FontWeight.Bold) },
+                            text = { Text(androidx.compose.ui.res.stringResource(com.example.R.string.menu_install_apk), color = SleekFolderText, fontWeight = FontWeight.Bold) },
                             onClick = {
                                 activeItemActions = null
                                 installApk(context, item)
@@ -1031,7 +1032,7 @@ fun MainFileManagerScreen(
                 }
                 HorizontalDivider(color = SleekBorderLight)
                 DropdownMenuItem(
-                    text = { Text("Secure Delete", color = Color(0xFFBA1A1A), fontWeight = FontWeight.Bold) },
+                    text = { Text(androidx.compose.ui.res.stringResource(com.example.R.string.title_secure_delete), color = Color(0xFFBA1A1A), fontWeight = FontWeight.Bold) },
                     onClick = {
                         activeItemActions = null
                         showDeleteConfirmDialog = item
@@ -1130,7 +1131,7 @@ fun MainFileManagerScreen(
         var renameText by remember { mutableStateOf(item.name) }
         AlertDialog(
             onDismissRequest = { showRenameDialog = null },
-            title = { Text("Rename Element", color = SleekTextMain, fontWeight = FontWeight.Bold) },
+            title = { Text(androidx.compose.ui.res.stringResource(com.example.R.string.menu_rename), color = SleekTextMain, fontWeight = FontWeight.Bold) },
             text = {
                 OutlinedTextField(
                     value = renameText,
@@ -1166,7 +1167,7 @@ fun MainFileManagerScreen(
     showDeleteConfirmDialog?.let { item ->
         AlertDialog(
             onDismissRequest = { showDeleteConfirmDialog = null },
-            title = { Text("Secure Delete Action", color = SleekTextMain, fontWeight = FontWeight.Bold) },
+            title = { Text(androidx.compose.ui.res.stringResource(com.example.R.string.title_secure_delete), color = SleekTextMain, fontWeight = FontWeight.Bold) },
             text = { Text("Are you completely sure you want to permanently erase: ${item.name}?", color = SleekTextAlt) },
             confirmButton = {
                 Button(
@@ -1449,7 +1450,7 @@ fun FileElementRow(
 
             val detailsText = if (file.isDirectory) {
                 val qty = file.listFiles()?.size ?: 0
-                "$qty elements"
+                androidx.compose.ui.res.stringResource(com.example.R.string.msg_elements, qty)
             } else {
                 val sizeKb = file.length() / 1024
                 val date = Date(file.lastModified())

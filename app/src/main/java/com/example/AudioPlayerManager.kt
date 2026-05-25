@@ -72,7 +72,7 @@ object AudioPlayerManager {
             val startVol = player?.volume ?: 1f
             for (i in 10 downTo 0) {
                 player?.volume = startVol * (i / 10f)
-                kotlinx.coroutines.delay(50)
+                kotlinx.coroutines.delay(20)
             }
             stop()
             player?.volume = 1f // restore

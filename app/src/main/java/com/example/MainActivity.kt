@@ -176,7 +176,7 @@ class MainActivity : ComponentActivity() {
                             modifier = Modifier
                                 .fillMaxSize()
                                 .padding(16.dp)
-                                .padding(bottom = insetsPadding),
+                                .padding(bottom = insetsPadding + 72.dp),
                             contentAlignment = androidx.compose.ui.Alignment.BottomCenter
                         ) {
                             com.example.ui.components.MiniAudioPlayer(
@@ -195,13 +195,15 @@ class MainActivity : ComponentActivity() {
                     // Full Audio Player Overlay
                     androidx.compose.animation.AnimatedVisibility(
                         visible = isFullPlayerVisible && playingFile != null,
-                        enter = androidx.compose.animation.slideInVertically(initialOffsetY = { it }),
-                        exit = androidx.compose.animation.slideOutVertically(targetOffsetY = { it })
+                        enter = androidx.compose.animation.slideInVertically(initialOffsetY = { it }) + androidx.compose.animation.fadeIn(),
+                        exit = androidx.compose.animation.slideOutVertically(targetOffsetY = { it }) + androidx.compose.animation.fadeOut()
                     ) {
                         if (playingFile != null) {
                             MusicPlayerScreen(
                                 file = playingFile,
-                                onBack = { com.example.AudioPlayerManager.isFullPlayerVisible.value = false }
+                                onBack = { 
+                                    com.example.AudioPlayerManager.isFullPlayerVisible.value = false 
+                                }
                             )
                         }
                     }
