@@ -1466,7 +1466,8 @@ fun FileElementRow(
             ext in listOf("png", "jpg", "jpeg") -> Triple(SleekImageBg, SleekImageText, androidx.compose.material.icons.Icons.Default.Image.let { androidx.compose.ui.graphics.vector.rememberVectorPainter(it) })
             ext == "svg" -> Triple(SleekImageBg, SleekImageText, androidx.compose.material.icons.Icons.Default.Palette.let { androidx.compose.ui.graphics.vector.rememberVectorPainter(it) })
             ext == "apk" -> Triple(SleekZipBg, SleekZipText, androidx.compose.ui.res.painterResource(com.example.R.drawable.ic_apk_custom))
-            ext in listOf("zip", "mcpack", "mcworld", "mctemplate", "mcaddon") -> Triple(SleekZipBg, SleekZipText, androidx.compose.ui.res.painterResource(com.example.R.drawable.ic_minecraft_zip))
+            ext == "zip" -> Triple(SleekZipBg, SleekZipText, androidx.compose.ui.res.painterResource(com.example.R.drawable.ic_zip_custom))
+            ext in listOf("mcpack", "mcworld", "mctemplate", "mcaddon") -> Triple(SleekZipBg, SleekZipText, androidx.compose.ui.res.painterResource(com.example.R.drawable.ic_minecraft_zip))
             ext in listOf("mp3", "wav", "m4a", "ogg", "flac", "mp4", "mkv") -> Triple(SleekAudioBg, SleekAudioText, androidx.compose.material.icons.Icons.Default.LibraryMusic.let { androidx.compose.ui.graphics.vector.rememberVectorPainter(it) })
             else -> Triple(SleekOtherBg, SleekOtherText, androidx.compose.material.icons.Icons.Default.InsertDriveFile.let { androidx.compose.ui.graphics.vector.rememberVectorPainter(it) })
         }

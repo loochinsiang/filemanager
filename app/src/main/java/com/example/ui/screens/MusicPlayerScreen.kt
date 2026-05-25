@@ -31,6 +31,8 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player
@@ -55,6 +57,17 @@ fun MusicPlayerScreen(
     val isVideo = file.extension.lowercase(Locale.ROOT) in listOf("mp4", "mkv", "avi", "webm", "mov")
     val orientation = LocalConfiguration.current.orientation
     val isLandscape = orientation == Configuration.ORIENTATION_LANDSCAPE
+    
+    var containerWidth by remember { mutableStateOf(1000f) }
+    var containerHeight by remember { mutableStateOf(1000f) }
+    var draggingLeft by remember { mutableStateOf(false) }
+    val activity = context as? android.app.Activity
+    val audioManager = remember { context.getSystemService(android.content.Context.AUDIO_SERVICE) as android.media.AudioManager }
+    val maxVol = remember { audioManager.getStreamMaxVolume(android.media.AudioManager.STREAM_MUSIC) }
+    var volumeProgress by remember { mutableStateOf(0.5f) }
+    var brightnessProgress by remember { mutableStateOf(0.5f) }
+    var activeGestureLabel by remember { mutableStateOf<String?>(null) }
+    var activeGestureIcon by remember { mutableStateOf<androidx.compose.ui.graphics.vector.ImageVector?>(null) }
     
     val parentFiles = remember(file) {
         file.parentFile?.listFiles()?.filter { f -> 
@@ -245,6 +258,10 @@ fun MusicPlayerScreen(
                     .padding(innerPadding)
                     .fillMaxSize()
                     .background(Color.Black)
+                    .onGloballyPositioned { coordinates ->
+                        containerWidth = coordinates.size.width.toFloat()
+                        containerHeight = coordinates.size.height.toFloat()
+                    }
             ) {
                 // Video Player at the Top/Center
                 AndroidView(
@@ -259,10 +276,98 @@ fun MusicPlayerScreen(
                             )
                         }
                     },
+                    modifier = Modifier.fillMaxSize()
+                )
+
+                // Overlay gesture sensing layer
+                Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .clickable { showOverlay = !showOverlay }
+                        .pointerInput(Unit) {
+                            detectTapGestures(
+                                onTap = { showOverlay = !showOverlay }
+                            )
+                        }
+                        .pointerInput(Unit) {
+                            detectVerticalDragGestures(
+                                onDragStart = { offset ->
+                                    draggingLeft = offset.x < containerWidth / 2f
+                                    if (!draggingLeft) {
+                                        val currentVol = audioManager.getStreamVolume(android.media.AudioManager.STREAM_MUSIC)
+                                        volumeProgress = currentVol.toFloat() / maxVol.coerceAtLeast(1)
+                                    } else {
+                                        val currentBrightnessRaw = activity?.window?.attributes?.screenBrightness ?: -1f
+                                        brightnessProgress = if (currentBrightnessRaw < 0f) 0.5f else currentBrightnessRaw
+                                    }
+                                },
+                                onDragEnd = {
+                                    activeGestureLabel = null
+                                    activeGestureIcon = null
+                                },
+                                onDragCancel = {
+                                    activeGestureLabel = null
+                                    activeGestureIcon = null
+                                },
+                                onVerticalDrag = { change, dragAmount ->
+                                    change.consume()
+                                    val sensitivity = 1.3f
+                                    val delta = -dragAmount / containerHeight * sensitivity
+                                    if (draggingLeft) {
+                                        brightnessProgress = (brightnessProgress + delta).coerceIn(0.01f, 1.0f)
+                                        activity?.runOnUiThread {
+                                            val layoutParams = activity.window.attributes
+                                            layoutParams.screenBrightness = brightnessProgress
+                                            activity.window.attributes = layoutParams
+                                        }
+                                        activeGestureLabel = "Brightness: ${(brightnessProgress * 100).toInt()}%"
+                                        activeGestureIcon = if (brightnessProgress < 0.4f) Icons.Default.BrightnessLow else if (brightnessProgress < 0.7f) Icons.Default.BrightnessMedium else Icons.Default.BrightnessHigh
+                                    } else {
+                                        volumeProgress = (volumeProgress + delta).coerceIn(0.0f, 1.0f)
+                                        val targetVol = (volumeProgress * maxVol).toInt().coerceIn(0, maxVol)
+                                        audioManager.setStreamVolume(android.media.AudioManager.STREAM_MUSIC, targetVol, android.media.AudioManager.FLAG_SHOW_UI)
+                                        activeGestureLabel = "Volume: ${(volumeProgress * 100).toInt()}%"
+                                        activeGestureIcon = if (targetVol == 0) Icons.Default.VolumeMute else if (targetVol < maxVol / 2) Icons.Default.VolumeDown else Icons.Default.VolumeUp
+                                    }
+                                }
+                            )
+                        }
                 )
+
+                // Beautiful centered sliding gesture HUD
+                AnimatedVisibility(
+                    visible = activeGestureLabel != null,
+                    enter = fadeIn(),
+                    exit = fadeOut(),
+                    modifier = Modifier.align(Alignment.Center)
+                ) {
+                    if (activeGestureLabel != null && activeGestureIcon != null) {
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = Color(0xAA000000)),
+                            shape = RoundedCornerShape(16.dp),
+                            modifier = Modifier.padding(16.dp)
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center
+                            ) {
+                                Icon(
+                                    imageVector = activeGestureIcon!!,
+                                    contentDescription = activeGestureLabel,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(48.dp)
+                                )
+                                Spacer(Modifier.height(8.dp))
+                                Text(
+                                    text = activeGestureLabel!!,
+                                    color = Color.White,
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
+                }
 
                 AnimatedVisibility(
                     visible = showOverlay,

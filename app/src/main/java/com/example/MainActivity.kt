@@ -46,6 +46,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        com.example.AudioPlayerManager.initialize(this)
         setContent {
             MyApplicationTheme {
                 val context = LocalContext.current
