@@ -39,6 +39,7 @@ import kotlinx.coroutines.delay
 import java.io.File
 import java.util.Locale
 
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MusicPlayerScreen(
@@ -162,13 +163,14 @@ fun MusicPlayerScreen(
         containerColor = if (isVideo) Color.Black else SleekBg
     ) { innerPadding ->
         if (isVideo) {
+            val tealColor = Color(0xFF00E6B8)
             Box(
                 modifier = Modifier
                     .padding(innerPadding)
                     .fillMaxSize()
                     .background(Color.Black)
-                    .clickable { showOverlay = !showOverlay }
             ) {
+                // Video Player at the Top/Center
                 AndroidView(
                     factory = { ctx ->
                         PlayerView(ctx).apply {
@@ -180,78 +182,98 @@ fun MusicPlayerScreen(
                             )
                         }
                     },
-                    modifier = Modifier.fillMaxSize()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .fillMaxHeight(0.6f) // Take up about 60% of the screen
+                        .align(Alignment.TopCenter)
+                        .clickable { showOverlay = !showOverlay }
                 )
 
                 AnimatedVisibility(
                     visible = showOverlay,
                     enter = fadeIn(),
-                    exit = fadeOut()
+                    exit = fadeOut(),
+                    modifier = Modifier.fillMaxSize()
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(Color.Black.copy(alpha = 0.5f))
-                    ) {
-                        // Top bar
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        // Top Bar
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(16.dp),
+                                .padding(16.dp)
+                                .align(Alignment.TopCenter),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            IconButton(onClick = onBack) {
+                            IconButton(
+                                onClick = onBack,
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .background(Color(0x33FFFFFF), CircleShape)
+                            ) {
                                 Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
                             }
-                            Text(
-                                file.name,
-                                color = Color.White,
-                                fontWeight = FontWeight.SemiBold,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
+                            
+                            Spacer(Modifier.weight(1f))
+                            
+                            Box(
                                 modifier = Modifier
-                                    .weight(1f)
-                                    .padding(horizontal = 8.dp)
-                            )
-                            IconButton(onClick = {}) { Icon(Icons.Default.MoreVert, contentDescription = "More", tint = Color.White) }
+                                    .background(Color(0x33FFFFFF), RoundedCornerShape(16.dp))
+                                    .padding(horizontal = 12.dp, vertical = 6.dp)
+                            ) {
+                                Text(
+                                    "${file.nameWithoutExtension} • 29/238",
+                                    color = Color.White,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Medium
+                                )
+                            }
+                            
+                            Spacer(Modifier.weight(1f))
                         }
 
-                        // Center Controls
+                        // Center Controls over video
                         Row(
-                            modifier = Modifier.align(Alignment.Center),
-                            horizontalArrangement = Arrangement.spacedBy(32.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .fillMaxHeight(0.6f)
+                                .align(Alignment.TopCenter),
+                            horizontalArrangement = Arrangement.Center,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             IconButton(
                                 onClick = { exoPlayer.seekTo((exoPlayer.currentPosition - 10000).coerceAtLeast(0)) },
                                 modifier = Modifier
-                                    .size(64.dp)
-                                    .background(Color.Black.copy(alpha = 0.4f), CircleShape)
+                                    .size(56.dp)
+                                    .background(Color(0x66000000), CircleShape)
                             ) {
-                                Icon(Icons.Default.Replay10, contentDescription = "Rewind 10", tint = Color.White, modifier = Modifier.size(32.dp))
+                                Icon(Icons.Default.SkipPrevious, contentDescription = "Skip Previous", tint = Color.White, modifier = Modifier.size(28.dp))
                             }
+                            
+                            Spacer(Modifier.width(32.dp))
                             
                             IconButton(
                                 onClick = togglePlay,
                                 modifier = Modifier
-                                    .size(80.dp)
-                                    .background(Color.Black.copy(alpha = 0.4f), CircleShape)
+                                    .size(72.dp)
+                                    .background(Color(0x66000000), CircleShape)
                             ) {
                                 Icon(
                                     if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                                     contentDescription = "Play/Pause",
                                     tint = Color.White,
-                                    modifier = Modifier.size(48.dp)
+                                    modifier = Modifier.size(36.dp)
                                 )
                             }
+                            
+                            Spacer(Modifier.width(32.dp))
                             
                             IconButton(
                                 onClick = { exoPlayer.seekTo((exoPlayer.currentPosition + 10000).coerceAtMost(durationMs)) },
                                 modifier = Modifier
-                                    .size(64.dp)
-                                    .background(Color.Black.copy(alpha = 0.4f), CircleShape)
+                                    .size(56.dp)
+                                    .background(Color(0x66000000), CircleShape)
                             ) {
-                                Icon(Icons.Default.Forward10, contentDescription = "Forward 10", tint = Color.White, modifier = Modifier.size(32.dp))
+                                Icon(Icons.Default.SkipNext, contentDescription = "Skip Next", tint = Color.White, modifier = Modifier.size(28.dp))
                             }
                         }
 
@@ -260,29 +282,68 @@ fun MusicPlayerScreen(
                             modifier = Modifier
                                 .align(Alignment.BottomCenter)
                                 .fillMaxWidth()
-                                .padding(16.dp)
+                                .padding(horizontal = 24.dp, vertical = 32.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
                         ) {
+                            Text(
+                                text = file.nameWithoutExtension,
+                                color = Color.White,
+                                fontSize = 24.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(bottom = 32.dp)
+                            )
+                            
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
+                                val buttonBg = Color(0x33FFFFFF)
+                                IconButton(onClick = {}, modifier = Modifier.size(40.dp).background(buttonBg, CircleShape)) {
+                                    Icon(Icons.Default.ScreenRotation, contentDescription = "Rotate", tint = Color.White, modifier = Modifier.size(20.dp))
+                                }
+                                Box(modifier = Modifier.size(40.dp).background(buttonBg, CircleShape), contentAlignment = Alignment.Center) {
+                                    Text("SW", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                }
+                                IconButton(onClick = {}, modifier = Modifier.size(40.dp).background(buttonBg, CircleShape)) {
+                                    Icon(Icons.Default.MusicNote, contentDescription = "Audio", tint = Color.White, modifier = Modifier.size(20.dp))
+                                }
+                                IconButton(onClick = {}, modifier = Modifier.size(40.dp).background(buttonBg, CircleShape)) {
+                                    Icon(Icons.Default.Keyboard, contentDescription = "Keyboard", tint = Color.White, modifier = Modifier.size(20.dp))
+                                }
+                                IconButton(onClick = {}, modifier = Modifier.size(40.dp).background(buttonBg, CircleShape)) {
+                                    Icon(Icons.Default.Speed, contentDescription = "Speed", tint = Color.White, modifier = Modifier.size(20.dp))
+                                }
+                                IconButton(onClick = {}, modifier = Modifier.size(40.dp).background(buttonBg, CircleShape)) {
+                                    Icon(Icons.Default.Repeat, contentDescription = "Repeat", tint = Color.White, modifier = Modifier.size(20.dp))
+                                }
+                                IconButton(onClick = {}, modifier = Modifier.size(40.dp).background(buttonBg, CircleShape)) {
+                                    Icon(Icons.Default.Fullscreen, contentDescription = "Fullscreen", tint = Color.White, modifier = Modifier.size(20.dp))
+                                }
+                            }
+                            
+                            Spacer(Modifier.height(32.dp))
+                            
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
                                 Text(currentTimeLabel, color = Color.White, fontSize = 12.sp)
+                                Spacer(Modifier.width(16.dp))
                                 Slider(
                                     value = currentProgress,
                                     onValueChange = { targetP ->
                                         currentProgress = targetP
                                         exoPlayer.seekTo((targetP * durationMs).toLong())
                                     },
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .padding(horizontal = 16.dp),
+                                    modifier = Modifier.weight(1f),
                                     colors = SliderDefaults.colors(
-                                        activeTrackColor = SleekFolderText,
-                                        thumbColor = SleekFolderText,
-                                        inactiveTrackColor = Color.White.copy(0.3f)
+                                        activeTrackColor = tealColor,
+                                        inactiveTrackColor = Color(0x40FFFFFF),
+                                        thumbColor = tealColor
                                     )
                                 )
+                                Spacer(Modifier.width(16.dp))
                                 Text(totalTimeLabel, color = Color.White, fontSize = 12.sp)
                             }
                         }

@@ -195,7 +195,46 @@ fun MainFileManagerScreen(
         }
     }
 
-    Scaffold(
+    val orientation = androidx.compose.ui.platform.LocalConfiguration.current.orientation
+    val isLandscape = orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+
+    Row(modifier = modifier.fillMaxSize()) {
+        if (isLandscape) {
+            val tabFiles = androidx.compose.ui.res.stringResource(com.example.R.string.tab_files)
+            val tabRecent = androidx.compose.ui.res.stringResource(com.example.R.string.tab_recent)
+            val tabTools = androidx.compose.ui.res.stringResource(com.example.R.string.tab_tools)
+            val tabSettings = androidx.compose.ui.res.stringResource(com.example.R.string.tab_settings)
+            
+            NavigationRail(
+                containerColor = SleekBottomNavBg,
+            ) {
+                NavigationRailItem(
+                    selected = activeTab == MainTab.FILES,
+                    onClick = { activeTab = MainTab.FILES },
+                    icon = { Icon(Icons.Default.Folder, contentDescription = "Files", tint = if (activeTab == MainTab.FILES) SleekFolderText else SleekTextAlt.copy(alpha = 0.6f)) },
+                    label = { Text(tabFiles, fontWeight = FontWeight.Bold, color = if (activeTab == MainTab.FILES) SleekFolderText else SleekTextAlt.copy(alpha = 0.6f)) }
+                )
+                NavigationRailItem(
+                    selected = activeTab == MainTab.RECENT,
+                    onClick = { activeTab = MainTab.RECENT },
+                    icon = { Icon(Icons.Default.History, contentDescription = "Recent", tint = if (activeTab == MainTab.RECENT) SleekFolderText else SleekTextAlt.copy(alpha = 0.6f)) },
+                    label = { Text(tabRecent, fontWeight = FontWeight.Bold, color = if (activeTab == MainTab.RECENT) SleekFolderText else SleekTextAlt.copy(alpha = 0.6f)) }
+                )
+                NavigationRailItem(
+                    selected = activeTab == MainTab.TOOLS,
+                    onClick = { activeTab = MainTab.TOOLS },
+                    icon = { Icon(Icons.Default.AutoAwesome, contentDescription = "Tools", tint = if (activeTab == MainTab.TOOLS) SleekFolderText else SleekTextAlt.copy(alpha = 0.6f)) },
+                    label = { Text(tabTools, fontWeight = FontWeight.Bold, color = if (activeTab == MainTab.TOOLS) SleekFolderText else SleekTextAlt.copy(alpha = 0.6f)) }
+                )
+                NavigationRailItem(
+                    selected = activeTab == MainTab.SETTINGS,
+                    onClick = { activeTab = MainTab.SETTINGS },
+                    icon = { Icon(Icons.Default.Settings, contentDescription = "Settings", tint = if (activeTab == MainTab.SETTINGS) SleekFolderText else SleekTextAlt.copy(alpha = 0.6f)) },
+                    label = { Text(tabSettings, fontWeight = FontWeight.Bold, color = if (activeTab == MainTab.SETTINGS) SleekFolderText else SleekTextAlt.copy(alpha = 0.6f)) }
+                )
+            }
+        }
+        Scaffold(
         topBar = {
             when (activeTab) {
                 MainTab.FILES -> {
@@ -385,65 +424,41 @@ fun MainFileManagerScreen(
             }
         },
         bottomBar = {
-            NavigationBar(
-                containerColor = SleekBottomNavBg,
-                tonalElevation = 0.dp
-            ) {
-                // Files Tab
-                NavigationBarItem(
-                    selected = activeTab == MainTab.FILES,
-                    onClick = { activeTab = MainTab.FILES },
-                    icon = {
-                        Icon(
-                            imageVector = Icons.Default.Folder,
-                            contentDescription = "Files",
-                            tint = if (activeTab == MainTab.FILES) SleekFolderText else SleekTextAlt.copy(alpha = 0.6f)
-                        )
-                    },
-                    label = { Text(androidx.compose.ui.res.stringResource(com.example.R.string.tab_files), fontWeight = FontWeight.Bold, color = if (activeTab == MainTab.FILES) SleekFolderText else SleekTextAlt.copy(alpha = 0.6f)) }
-                )
+            if (!isLandscape) {
+                val tabFiles = androidx.compose.ui.res.stringResource(com.example.R.string.tab_files)
+                val tabRecent = androidx.compose.ui.res.stringResource(com.example.R.string.tab_recent)
+                val tabTools = androidx.compose.ui.res.stringResource(com.example.R.string.tab_tools)
+                val tabSettings = androidx.compose.ui.res.stringResource(com.example.R.string.tab_settings)
 
-                // Recent Tab
-                NavigationBarItem(
-                    selected = activeTab == MainTab.RECENT,
-                    onClick = { activeTab = MainTab.RECENT },
-                    icon = {
-                        Icon(
-                            imageVector = Icons.Default.History,
-                            contentDescription = "Recent",
-                            tint = if (activeTab == MainTab.RECENT) SleekFolderText else SleekTextAlt.copy(alpha = 0.6f)
-                        )
-                    },
-                    label = { Text(androidx.compose.ui.res.stringResource(com.example.R.string.tab_recent), fontWeight = FontWeight.Bold, color = if (activeTab == MainTab.RECENT) SleekFolderText else SleekTextAlt.copy(alpha = 0.6f)) }
-                )
-
-                // Tools Tab
-                NavigationBarItem(
-                    selected = activeTab == MainTab.TOOLS,
-                    onClick = { activeTab = MainTab.TOOLS },
-                    icon = {
-                        Icon(
-                            imageVector = Icons.Default.AutoAwesome,
-                            contentDescription = "Tools",
-                            tint = if (activeTab == MainTab.TOOLS) SleekFolderText else SleekTextAlt.copy(alpha = 0.6f)
-                        )
-                    },
-                    label = { Text(androidx.compose.ui.res.stringResource(com.example.R.string.tab_tools), fontWeight = FontWeight.Bold, color = if (activeTab == MainTab.TOOLS) SleekFolderText else SleekTextAlt.copy(alpha = 0.6f)) }
-                )
-
-                // Settings Tab
-                NavigationBarItem(
-                    selected = activeTab == MainTab.SETTINGS,
-                    onClick = { activeTab = MainTab.SETTINGS },
-                    icon = {
-                        Icon(
-                            imageVector = Icons.Default.Settings,
-                            contentDescription = "Settings",
-                            tint = if (activeTab == MainTab.SETTINGS) SleekFolderText else SleekTextAlt.copy(alpha = 0.6f)
-                        )
-                    },
-                    label = { Text(androidx.compose.ui.res.stringResource(com.example.R.string.tab_settings), fontWeight = FontWeight.Bold, color = if (activeTab == MainTab.SETTINGS) SleekFolderText else SleekTextAlt.copy(alpha = 0.6f)) }
-                )
+                NavigationBar(
+                    containerColor = SleekBottomNavBg,
+                    tonalElevation = 0.dp
+                ) {
+                    NavigationBarItem(
+                        selected = activeTab == MainTab.FILES,
+                        onClick = { activeTab = MainTab.FILES },
+                        icon = { Icon(Icons.Default.Folder, contentDescription = "Files", tint = if (activeTab == MainTab.FILES) SleekFolderText else SleekTextAlt.copy(alpha = 0.6f)) },
+                        label = { Text(tabFiles, fontWeight = FontWeight.Bold, color = if (activeTab == MainTab.FILES) SleekFolderText else SleekTextAlt.copy(alpha = 0.6f)) }
+                    )
+                    NavigationBarItem(
+                        selected = activeTab == MainTab.RECENT,
+                        onClick = { activeTab = MainTab.RECENT },
+                        icon = { Icon(Icons.Default.History, contentDescription = "Recent", tint = if (activeTab == MainTab.RECENT) SleekFolderText else SleekTextAlt.copy(alpha = 0.6f)) },
+                        label = { Text(tabRecent, fontWeight = FontWeight.Bold, color = if (activeTab == MainTab.RECENT) SleekFolderText else SleekTextAlt.copy(alpha = 0.6f)) }
+                    )
+                    NavigationBarItem(
+                        selected = activeTab == MainTab.TOOLS,
+                        onClick = { activeTab = MainTab.TOOLS },
+                        icon = { Icon(Icons.Default.AutoAwesome, contentDescription = "Tools", tint = if (activeTab == MainTab.TOOLS) SleekFolderText else SleekTextAlt.copy(alpha = 0.6f)) },
+                        label = { Text(tabTools, fontWeight = FontWeight.Bold, color = if (activeTab == MainTab.TOOLS) SleekFolderText else SleekTextAlt.copy(alpha = 0.6f)) }
+                    )
+                    NavigationBarItem(
+                        selected = activeTab == MainTab.SETTINGS,
+                        onClick = { activeTab = MainTab.SETTINGS },
+                        icon = { Icon(Icons.Default.Settings, contentDescription = "Settings", tint = if (activeTab == MainTab.SETTINGS) SleekFolderText else SleekTextAlt.copy(alpha = 0.6f)) },
+                        label = { Text(tabSettings, fontWeight = FontWeight.Bold, color = if (activeTab == MainTab.SETTINGS) SleekFolderText else SleekTextAlt.copy(alpha = 0.6f)) }
+                    )
+                }
             }
         },
         floatingActionButton = {
@@ -963,7 +978,8 @@ fun MainFileManagerScreen(
                 )
             }
         }
-    }
+    } // End of Scaffold content
+    } // End of Row
 
     // Dialog: Create Folder
     if (showCreateDirDialog) {
