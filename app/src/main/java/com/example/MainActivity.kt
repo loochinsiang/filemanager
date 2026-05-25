@@ -33,6 +33,7 @@ sealed class ScreenState {
     data class MusicPlayer(val file: File) : ScreenState()
     data class HexEditor(val file: File) : ScreenState()
     data class FontViewer(val file: File) : ScreenState()
+    object Changelog : ScreenState()
 }
 
 class MainActivity : ComponentActivity() {
@@ -124,6 +125,7 @@ class MainActivity : ComponentActivity() {
                                                 }
                                                 "hex" -> ScreenState.HexEditor(targetFile)
                                                 "font" -> ScreenState.FontViewer(targetFile)
+                                                "changelog" -> ScreenState.Changelog
                                                 else -> ScreenState.CodeEditor(targetFile)
                                             }
                                         }
@@ -167,6 +169,11 @@ class MainActivity : ComponentActivity() {
                             is ScreenState.FontViewer -> {
                                 FontViewerScreen(
                                     file = targetScreen.file,
+                                    onBack = { currentScreen = ScreenState.Main }
+                                )
+                            }
+                            is ScreenState.Changelog -> {
+                                com.example.ui.screens.settings.ChangelogScreen(
                                     onBack = { currentScreen = ScreenState.Main }
                                 )
                             }

@@ -40,40 +40,43 @@ fun MiniAudioPlayer(
 ) {
     val containerBg = com.example.ui.theme.SleekBottomNavBg
     val iconTint = com.example.ui.theme.SleekTextMain
-    val offsetY = androidx.compose.runtime.remember { androidx.compose.animation.core.Animatable(0f) }
+    val dragOffsetY = androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(0f) }
     val coroutineScope = androidx.compose.runtime.rememberCoroutineScope()
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .height(64.dp)
-            .offset { IntOffset(0, offsetY.value.toInt()) }
-            .alpha(1f - (offsetY.value / 200f).coerceIn(0f, 1f))
+            .offset { IntOffset(0, dragOffsetY.value.toInt()) }
+            .alpha((1f - (dragOffsetY.value / 200f)).coerceIn(0f, 1f))
             .pointerInput(Unit) {
                 detectVerticalDragGestures(
                     onVerticalDrag = { change, dragAmount ->
-                        coroutineScope.launch {
-                            val newOffset = (offsetY.value + dragAmount)
-                            offsetY.snapTo(newOffset)
-                        }
+                        change.consume()
+                        dragOffsetY.value = (dragOffsetY.value + dragAmount).coerceIn(-100f, 300f)
                     },
                     onDragEnd = {
-                        coroutineScope.launch {
-                            if (offsetY.value > 100f) {
-                                onClose()
-                                offsetY.animateTo(300f)
-                            } else if (offsetY.value < -20f) {
-                                offsetY.animateTo(0f)
-                                onClick()
-                            } else {
-                                offsetY.animateTo(0f)
+                        if (dragOffsetY.value > 100f) {
+                            onClose()
+                            dragOffsetY.value = 0f
+                        } else if (dragOffsetY.value < -20f) {
+                            onClick()
+                            dragOffsetY.value = 0f
+                        } else {
+                            coroutineScope.launch {
+                                try {
+                                    val anim = androidx.compose.animation.core.Animatable(dragOffsetY.value)
+                                    anim.animateTo(0f) {
+                                        dragOffsetY.value = this.value
+                                    }
+                                } catch (e: Exception) {
+                                    dragOffsetY.value = 0f
+                                }
                             }
                         }
                     },
                     onDragCancel = {
-                        coroutineScope.launch {
-                            offsetY.animateTo(0f)
-                        }
+                        dragOffsetY.value = 0f
                     }
                 )
             }

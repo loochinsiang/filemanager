@@ -34,6 +34,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ui.theme.*
+import com.example.ui.screens.settings.*
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -938,59 +939,114 @@ fun MainFileManagerScreen(
                     }
                 }
                 MainTab.SETTINGS -> {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = 24.dp)
-                            .verticalScroll(rememberScrollState()),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        Text("App Properties", fontWeight = FontWeight.Bold, color = SleekTextMain, fontSize = 16.sp)
-
-                        Card(
-                            shape = RoundedCornerShape(16.dp),
-                            colors = CardDefaults.cardColors(containerColor = Color.White),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, SleekBorderLight),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                                Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-                                    Text("Application Label", color = SleekTextSub, fontSize = 13.sp)
-                                    Text("FileSmith Studio", color = SleekTextMain, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                                }
-                                HorizontalDivider(color = SleekBorderLight)
-                                Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-                                    Text("Software Version", color = SleekTextSub, fontSize = 13.sp)
-                                    Text("v1.3.1 - Expressive", color = SleekTextMain, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                                }
-                                HorizontalDivider(color = SleekBorderLight)
-                                Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-                                    Text("Dev Storage Access", color = SleekTextSub, fontSize = 13.sp)
-                                    Text(if (hasStoragePermission) "Granted (All-Access)" else "Denied", color = if (hasStoragePermission) SleekFolderText else Color.Red, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                                }
-                            }
-                        }
-
-                        com.example.ui.components.LanguagePreference()
-
-                        Text("Performance & Cache Controls", fontWeight = FontWeight.Bold, color = SleekTextMain, fontSize = 16.sp)
-
-                        Button(
-                            onClick = {
-                                val prefs = context.getSharedPreferences("app_prefs", android.content.Context.MODE_PRIVATE)
-                                prefs.edit().clear().apply()
-                            },
-                            modifier = Modifier.fillMaxWidth().height(48.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFBA1A1A), contentColor = Color.White),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Icon(Icons.Default.Refresh, contentDescription = null)
-                            Spacer(Modifier.width(8.dp))
-                            Text("Reset App Preferences & Cache", fontWeight = FontWeight.Bold)
-                        }
-
-                        Spacer(Modifier.height(40.dp))
+                    // Build the M3 Adaptive Settings layout dynamically!
+                    val profileState = remember {
+                        SettingsProfileState(
+                            isLoading = false,
+                            isLoggedIn = false,
+                            accountName = "",
+                            accountEmail = "",
+                            accountImageUrl = null
+                        )
                     }
+
+                    val quickActions = remember {
+                        listOf(
+                            SettingsQuickAction(
+                                icon = Icons.Default.History,
+                                label = "Changelog",
+                                accentColor = Color(0xFF007DF0),
+                                onClick = {
+                                    onOpenFile(java.io.File(""), "changelog")
+                                }
+                            ),
+                            SettingsQuickAction(
+                                icon = Icons.Default.Refresh,
+                                label = "Reset Cache",
+                                accentColor = Color(0xFFBA1A1A),
+                                onClick = {
+                                    val prefs = context.getSharedPreferences("app_prefs", android.content.Context.MODE_PRIVATE)
+                                    prefs.edit().clear().apply()
+                                    Toast.makeText(context, "Preferences & Cache Reset Successfully!", Toast.LENGTH_SHORT).show()
+                                }
+                            )
+                        )
+                    }
+
+                    val integrations = remember {
+                        listOf(
+                            SettingsIntegrationAction(
+                                icon = Icons.Default.Web,
+                                label = "GitHub Codebase",
+                                accentColor = Color(0xFF1F2328),
+                                onClick = {
+                                    val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("https://github.com/loochinsiang/filemanager"))
+                                    context.startActivity(intent)
+                                }
+                            )
+                        )
+                    }
+
+                    val groups = remember(hasStoragePermission) {
+                        listOf(
+                            SettingsGroup(
+                                title = "App Properties",
+                                items = listOf(
+                                    SettingsItem(
+                                        icon = Icons.Default.Label,
+                                        title = "Application Label",
+                                        subtitle = "FileSmith Studio",
+                                        accentColor = SleekFolderText,
+                                        onClick = {}
+                                    ),
+                                    SettingsItem(
+                                        icon = Icons.Default.Info,
+                                        title = "Software Version",
+                                        subtitle = "v1.3.1 - Expressive",
+                                        accentColor = SleekTextAlt,
+                                        onClick = {}
+                                    ),
+                                    SettingsItem(
+                                        icon = Icons.Default.Storage,
+                                        title = "Dev Storage Access",
+                                        subtitle = if (hasStoragePermission) "Granted (All-Access)" else "Denied",
+                                        accentColor = if (hasStoragePermission) SleekFolderText else Color.Red,
+                                        onClick = {
+                                            if (!hasStoragePermission) {
+                                                onRequestStoragePermission()
+                                            }
+                                        }
+                                    )
+                                )
+                            )
+                        )
+                    }
+
+                    val settingsContentState = remember(hasStoragePermission, quickActions, integrations, groups) {
+                        SettingsContentState(
+                            profileHeader = profileState,
+                            quickActions = quickActions,
+                            integrations = integrations,
+                            groups = groups,
+                            internalGroup = null,
+                            showPermissionBanner = !hasStoragePermission,
+                            showUpdateBanner = false,
+                            latestVersion = "1.3.1",
+                            isSearchActive = false,
+                            hasSearchResults = false,
+                            onProfileHeaderClick = {},
+                            onRequestPermission = { onRequestStoragePermission() },
+                            onUpdateClick = {}
+                        )
+                    }
+
+                    AdaptiveSettingsLayout(
+                        state = settingsContentState,
+                        modifier = Modifier.fillMaxSize(),
+                        additionalContent = {
+                            com.example.ui.components.LanguagePreference()
+                        }
+                    )
                 }
             }
         }
