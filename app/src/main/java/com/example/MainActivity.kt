@@ -157,6 +157,7 @@ class MainActivity : ComponentActivity() {
                     
                     // Mini Player overlay for audio
                     val isPlaying by com.example.AudioPlayerManager.isPlaying
+                    val progress by com.example.AudioPlayerManager.progress
                     val playingFile = com.example.AudioPlayerManager.currentFile.value
                     if (currentScreen !is ScreenState.MusicPlayer && playingFile != null) {
                         Box(
@@ -168,6 +169,7 @@ class MainActivity : ComponentActivity() {
                             com.example.ui.components.MiniAudioPlayer(
                                 file = playingFile,
                                 isPlaying = isPlaying,
+                                progress = progress,
                                 onPlayPause = { com.example.AudioPlayerManager.togglePlay() },
                                 onClick = { currentScreen = ScreenState.MusicPlayer(playingFile) },
                                 onNext = { com.example.AudioPlayerManager.player?.seekTo((com.example.AudioPlayerManager.player?.currentPosition ?: 0) + 10000) },

@@ -5,12 +5,15 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
+import kotlinx.coroutines.*
 import java.io.File
 
 object AudioPlayerManager {
     var player: ExoPlayer? = null
     var currentFile = mutableStateOf<File?>(null)
     var isPlaying = mutableStateOf(false)
+    var progress = mutableStateOf(0f)
+    private var progressJob: Job? = null
 
     fun initialize(context: Context) {
         if (player == null) {
@@ -18,8 +21,27 @@ object AudioPlayerManager {
             player?.addListener(object : Player.Listener {
                 override fun onIsPlayingChanged(isPlayingChange: Boolean) {
                     isPlaying.value = isPlayingChange
+                    if (isPlayingChange) {
+                        startProgressTracker()
+                    } else {
+                        progressJob?.cancel()
+                    }
                 }
             })
+        }
+    }
+
+    private fun startProgressTracker() {
+        progressJob?.cancel()
+        progressJob = CoroutineScope(Dispatchers.Main).launch {
+            while (isActive) {
+                val dur = player?.duration?.toFloat() ?: 1f
+                val pos = player?.currentPosition?.toFloat() ?: 0f
+                if (dur > 0) {
+                    progress.value = pos / dur
+                }
+                delay(1000)
+            }
         }
     }
 

@@ -77,6 +77,7 @@ fun MusicPlayerScreen(
     // Audio effects state
     var pitch by remember { mutableFloatStateOf(1.0f) }
     var tempo by remember { mutableFloatStateOf(1.0f) }
+    var lockPitchTempo by remember { mutableStateOf(false) }
     var enableReverb by remember { mutableStateOf(false) }
     var enableLimiter by remember { mutableStateOf(false) }
 
@@ -471,14 +472,24 @@ fun MusicPlayerScreen(
                                 .padding(start = 24.dp)
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text("Pitch (${String.format(Locale.US, "%.1f", pitch)}x)", modifier = Modifier.weight(1f), fontWeight = FontWeight.Bold, color = SleekTextMain)
-                                Slider(value = pitch, onValueChange = { pitch = it }, valueRange = 0.5f..2.0f, modifier = Modifier.weight(2f))
+                                Text("Pitch (${String.format(Locale.US, "%.2f", pitch)}x)", modifier = Modifier.weight(1f), fontWeight = FontWeight.Bold, color = SleekTextMain)
+                                Slider(value = pitch, onValueChange = { 
+                                    pitch = it
+                                    if (lockPitchTempo) tempo = it 
+                                }, valueRange = 0.5f..2.0f, modifier = Modifier.weight(2f))
                             }
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text("Tempo (${String.format(Locale.US, "%.1f", tempo)}x)", modifier = Modifier.weight(1f), fontWeight = FontWeight.Bold, color = SleekTextMain)
-                                Slider(value = tempo, onValueChange = { tempo = it }, valueRange = 0.5f..2.0f, modifier = Modifier.weight(2f))
+                                Text("Tempo (${String.format(Locale.US, "%.2f", tempo)}x)", modifier = Modifier.weight(1f), fontWeight = FontWeight.Bold, color = SleekTextMain)
+                                Slider(value = tempo, onValueChange = { 
+                                    tempo = it
+                                    if (lockPitchTempo) pitch = it
+                                }, valueRange = 0.5f..2.0f, modifier = Modifier.weight(2f))
                             }
                             Row(modifier = Modifier.fillMaxWidth().padding(top = 16.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Switch(checked = lockPitchTempo, onCheckedChange = { lockPitchTempo = it }, colors = SwitchDefaults.colors(checkedThumbColor = SleekFolderText, checkedTrackColor = SleekFolderBg))
+                                    Text("LOCK P/T", fontSize = 10.sp, color = SleekTextSub, fontWeight = FontWeight.Bold)
+                                }
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                     Switch(checked = enableReverb, onCheckedChange = { enableReverb = it }, colors = SwitchDefaults.colors(checkedThumbColor = SleekFolderText, checkedTrackColor = SleekFolderBg))
                                     Text("REVERB", fontSize = 10.sp, color = SleekTextSub, fontWeight = FontWeight.Bold)
@@ -527,13 +538,13 @@ fun MusicPlayerScreen(
                         
                         Row(horizontalArrangement = Arrangement.spacedBy(24.dp), verticalAlignment = Alignment.CenterVertically) {
                             IconButton(onClick = { exoPlayer.seekTo((exoPlayer.currentPosition - 5000).coerceAtLeast(0)) }, modifier = Modifier.size(48.dp)) {
-                                Icon(Icons.Default.FastRewind, contentDescription = "Rewind", tint = SleekTextAlt, modifier = Modifier.size(28.dp))
+                                Icon(painter = androidx.compose.ui.res.painterResource(id = com.example.R.drawable.ic_fast_rewind_custom), contentDescription = "Rewind", tint = SleekTextAlt, modifier = Modifier.size(28.dp))
                             }
                             Box(
                                 modifier = Modifier
                                     .size(68.dp)
                                     .clip(CircleShape)
-                                    .background(SleekFolderBg)
+                                    .background(Color.White)
                                     .clickable { togglePlay() },
                                 contentAlignment = Alignment.Center
                             ) {
@@ -542,13 +553,18 @@ fun MusicPlayerScreen(
                                     contentDescription = "Play/Pause", tint = SleekFolderText, modifier = Modifier.size(36.dp))
                             }
                             IconButton(onClick = { exoPlayer.seekTo((exoPlayer.currentPosition + 5000).coerceAtMost(durationMs)) }, modifier = Modifier.size(48.dp)) {
-                                Icon(Icons.Default.FastForward, contentDescription = "ForwardDelta", tint = SleekTextAlt, modifier = Modifier.size(28.dp))
+                                Icon(painter = androidx.compose.ui.res.painterResource(id = com.example.R.drawable.ic_fast_forward_custom), contentDescription = "ForwardDelta", tint = SleekTextAlt, modifier = Modifier.size(28.dp))
                             }
                         }
                         
                         Spacer(Modifier.height(32.dp))
                         
                         Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Switch(checked = lockPitchTempo, onCheckedChange = { lockPitchTempo = it }, colors = SwitchDefaults.colors(checkedThumbColor = SleekFolderText, checkedTrackColor = SleekFolderBg))
+                                Spacer(Modifier.height(8.dp))
+                                Text("LOCK P/T", fontSize = 10.sp, color = SleekTextSub, fontWeight = FontWeight.Bold)
+                            }
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Switch(checked = enableReverb, onCheckedChange = { enableReverb = it }, colors = SwitchDefaults.colors(checkedThumbColor = SleekFolderText, checkedTrackColor = SleekFolderBg))
                                 Spacer(Modifier.height(8.dp))
@@ -565,12 +581,18 @@ fun MusicPlayerScreen(
                         
                         Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text("Pitch (${String.format(Locale.US, "%.1f", pitch)}x)", modifier = Modifier.weight(1f), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = SleekTextMain)
-                                Slider(value = pitch, onValueChange = { pitch = it }, valueRange = 0.5f..2.0f, modifier = Modifier.weight(2f))
+                                Text("Pitch (${String.format(Locale.US, "%.2f", pitch)}x)", modifier = Modifier.weight(1f), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = SleekTextMain)
+                                Slider(value = pitch, onValueChange = { 
+                                    pitch = it
+                                    if (lockPitchTempo) tempo = it 
+                                }, valueRange = 0.5f..2.0f, modifier = Modifier.weight(2f))
                             }
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text("Tempo (${String.format(Locale.US, "%.1f", tempo)}x)", modifier = Modifier.weight(1f), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = SleekTextMain)
-                                Slider(value = tempo, onValueChange = { tempo = it }, valueRange = 0.5f..2.0f, modifier = Modifier.weight(2f))
+                                Text("Tempo (${String.format(Locale.US, "%.2f", tempo)}x)", modifier = Modifier.weight(1f), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = SleekTextMain)
+                                Slider(value = tempo, onValueChange = { 
+                                    tempo = it
+                                    if (lockPitchTempo) pitch = it
+                                }, valueRange = 0.5f..2.0f, modifier = Modifier.weight(2f))
                             }
                         }
                     }
