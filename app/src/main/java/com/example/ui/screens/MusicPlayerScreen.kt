@@ -193,7 +193,8 @@ fun MusicPlayerScreen(
                             useController = false
                             layoutParams = FrameLayout.LayoutParams(
                                 ViewGroup.LayoutParams.MATCH_PARENT,
-                                ViewGroup.LayoutParams.MATCH_PARENT
+                                ViewGroup.LayoutParams.MATCH_PARENT,
+                                android.view.Gravity.CENTER
                             )
                         }
                     },
@@ -443,7 +444,9 @@ fun MusicPlayerScreen(
                                         .clickable { togglePlay() },
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    Icon(if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow, contentDescription = "Play/Pause", tint = SleekFolderText, modifier = Modifier.size(32.dp))
+                                    Icon(
+                                        painter = androidx.compose.ui.res.painterResource(id = if (isPlaying) com.example.R.drawable.ic_pause_custom else com.example.R.drawable.ic_play_custom),
+                                        contentDescription = "Play/Pause", tint = SleekFolderText, modifier = Modifier.size(32.dp))
                                 }
                                 IconButton(onClick = { exoPlayer.seekTo((exoPlayer.currentPosition + 5000).coerceAtMost(durationMs)) }) {
                                     Icon(Icons.Default.FastForward, contentDescription = "ForwardDelta", tint = SleekTextAlt)
@@ -524,7 +527,9 @@ fun MusicPlayerScreen(
                                     .clickable { togglePlay() },
                                 contentAlignment = Alignment.Center
                             ) {
-                                Icon(if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow, contentDescription = "Play/Pause", tint = SleekFolderText, modifier = Modifier.size(36.dp))
+                                Icon(
+                                    painter = androidx.compose.ui.res.painterResource(id = if (isPlaying) com.example.R.drawable.ic_pause_custom else com.example.R.drawable.ic_play_custom),
+                                    contentDescription = "Play/Pause", tint = SleekFolderText, modifier = Modifier.size(36.dp))
                             }
                             IconButton(onClick = { exoPlayer.seekTo((exoPlayer.currentPosition + 5000).coerceAtMost(durationMs)) }, modifier = Modifier.size(48.dp)) {
                                 Icon(Icons.Default.FastForward, contentDescription = "ForwardDelta", tint = SleekTextAlt, modifier = Modifier.size(28.dp))

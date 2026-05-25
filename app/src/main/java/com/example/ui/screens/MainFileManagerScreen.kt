@@ -92,7 +92,7 @@ fun MainFileManagerScreen(
     val handleFileOpen = { file: File ->
         val ext = file.extension.lowercase(Locale.ROOT)
         when {
-            ext == "zip" -> onOpenFile(file, "zip")
+            ext in listOf("zip", "mcpack", "mcworld", "mctemplate", "mcaddon") -> onOpenFile(file, "zip")
             ext in listOf("png", "jpg", "jpeg", "webp") -> onOpenFile(file, "image")
             ext == "svg" -> onOpenFile(file, "editor")
             ext in listOf("wav", "mp3", "m4a", "ogg", "flac", "mp4", "mkv") -> onOpenFile(file, "sound")
@@ -116,10 +116,25 @@ fun MainFileManagerScreen(
     val refreshFilesList = {
         isFolderLoading = true
         scope.launch(Dispatchers.IO) {
-            delay(200) // Brief aesthetic delay to highlight folder loading animations gracefully
+            val query = searchQuery
+            if (query.isNotBlank()) delay(400) else delay(100) // debounce for deep search
+            
             val files = try {
                 if (hasStoragePermission) {
-                    currentDirectory.listFiles()?.toList() ?: emptyList()
+                    if (query.isNotBlank()) {
+                        val result = mutableListOf<File>()
+                        try {
+                            currentDirectory.walkTopDown().maxDepth(10).forEach { file ->
+                                if (file.name.contains(query, ignoreCase = true) && file.absolutePath != currentDirectory.absolutePath) {
+                                    result.add(file)
+                                    if (result.size > 1000) return@forEach // Cap at 1000
+                                }
+                            }
+                        } catch (e: Exception) {}
+                        result
+                    } else {
+                        currentDirectory.listFiles()?.toList() ?: emptyList()
+                    }
                 } else {
                     emptyList()
                 }
@@ -150,7 +165,7 @@ fun MainFileManagerScreen(
         }
     }
 
-    LaunchedEffect(hasStoragePermission, currentDirectory, sortMode) {
+    LaunchedEffect(hasStoragePermission, currentDirectory, sortMode, searchQuery) {
         refreshFilesList()
     }
 
@@ -187,7 +202,7 @@ fun MainFileManagerScreen(
             val matchesChip = when (selectedFilter) {
                 "Source" -> !file.isDirectory && file.extension.lowercase(Locale.ROOT) in listOf("kt", "kts", "java", "js", "py", "css", "xml", "json", "md", "txt", "svg")
                 "Media" -> !file.isDirectory && file.extension.lowercase(Locale.ROOT) in listOf("mp3", "wav", "m4a", "ogg", "flac", "mp4", "mkv")
-                "Archives" -> !file.isDirectory && file.extension.lowercase(Locale.ROOT) == "zip"
+                "Archives" -> !file.isDirectory && file.extension.lowercase(Locale.ROOT) in listOf("zip", "mcpack", "mcworld", "mctemplate", "mcaddon")
                 "Images" -> !file.isDirectory && file.extension.lowercase(Locale.ROOT) in listOf("png", "jpg", "jpeg", "svg")
                 else -> true
             }
@@ -1366,15 +1381,19 @@ fun FileElementRow(
         verticalAlignment = Alignment.CenterVertically
     ) {
         val ext = file.extension.lowercase(Locale.ROOT)
-        val (bgCol, txtCol, icon) = when {
-            file.isDirectory -> Triple(SleekFolderBg, SleekFolderText, Icons.Default.Folder)
-            ext in listOf("kt", "kts", "java", "js", "py", "css", "xml", "json", "md", "txt") -> Triple(SleekCodeBg, SleekCodeText, Icons.Default.IntegrationInstructions)
-            ext in listOf("png", "jpg", "jpeg") -> Triple(SleekImageBg, SleekImageText, Icons.Default.Image)
-            ext == "svg" -> Triple(SleekImageBg, SleekImageText, Icons.Default.Palette)
-            ext == "zip" -> Triple(SleekZipBg, SleekZipText, Icons.Default.FolderZip)
-            ext in listOf("mp3", "wav", "m4a", "ogg", "flac", "mp4", "mkv") -> Triple(SleekAudioBg, SleekAudioText, Icons.Default.LibraryMusic)
-            else -> Triple(SleekOtherBg, SleekOtherText, Icons.Default.InsertDriveFile)
+        val iconPainter = when {
+            file.isDirectory -> Triple(SleekFolderBg, SleekFolderText, androidx.compose.material.icons.Icons.Default.Folder.let { androidx.compose.ui.graphics.vector.rememberVectorPainter(it) })
+            ext in listOf("kt", "kts", "java", "js", "py", "css", "xml", "json", "md", "txt") -> Triple(SleekCodeBg, SleekCodeText, androidx.compose.material.icons.Icons.Default.IntegrationInstructions.let { androidx.compose.ui.graphics.vector.rememberVectorPainter(it) })
+            ext in listOf("png", "jpg", "jpeg") -> Triple(SleekImageBg, SleekImageText, androidx.compose.material.icons.Icons.Default.Image.let { androidx.compose.ui.graphics.vector.rememberVectorPainter(it) })
+            ext == "svg" -> Triple(SleekImageBg, SleekImageText, androidx.compose.material.icons.Icons.Default.Palette.let { androidx.compose.ui.graphics.vector.rememberVectorPainter(it) })
+            ext in listOf("zip", "mcpack", "mcworld", "mctemplate", "mcaddon") -> Triple(SleekZipBg, SleekZipText, androidx.compose.ui.res.painterResource(com.example.R.drawable.ic_minecraft_zip))
+            ext in listOf("mp3", "wav", "m4a", "ogg", "flac", "mp4", "mkv") -> Triple(SleekAudioBg, SleekAudioText, androidx.compose.material.icons.Icons.Default.LibraryMusic.let { androidx.compose.ui.graphics.vector.rememberVectorPainter(it) })
+            else -> Triple(SleekOtherBg, SleekOtherText, androidx.compose.material.icons.Icons.Default.InsertDriveFile.let { androidx.compose.ui.graphics.vector.rememberVectorPainter(it) })
         }
+
+        val bgCol = iconPainter.first
+        val txtCol = iconPainter.second
+        val painter = iconPainter.third
 
         Box(
             modifier = Modifier
@@ -1383,7 +1402,7 @@ fun FileElementRow(
             contentAlignment = Alignment.Center
         ) {
             Icon(
-                imageVector = icon,
+                painter = painter,
                 contentDescription = null,
                 tint = txtCol,
                 modifier = Modifier.size(24.dp)
@@ -1410,13 +1429,14 @@ fun FileElementRow(
                 val date = Date(file.lastModified())
                 val format = SimpleDateFormat("MM-dd HH:mm", Locale.getDefault())
                 val typeLabel = when {
-                    ext == "zip" -> "Archive"
-                    ext in listOf("mp3", "wav", "m4a", "ogg", "flac", "mp4", "mkv") -> "Media"
-                    ext == "svg" -> "SVG"
-                    ext in listOf("png", "jpg", "jpeg") -> "Image"
-                    ext in listOf("kt", "java", "js") -> "Kotlin"
-                    else -> "Binary"
-                }
+            ext in listOf("zip", "mcpack", "mcworld", "mctemplate", "mcaddon") -> "Archive"
+            ext in listOf("mp3", "wav", "m4a", "ogg", "flac", "mp4", "mkv") -> "Media"
+            ext == "svg" -> "SVG"
+            ext in listOf("png", "jpg", "jpeg") -> "Image"
+            ext in listOf("kt", "java", "js") -> "Kotlin"
+            ext == "apk" -> "APK"
+            else -> "Binary"
+        }
                 "$typeLabel · $sizeKb KB · ${format.format(date)}"
             }
 
@@ -1526,7 +1546,8 @@ fun isBinaryFile(file: File): Boolean {
         "png", "jpg", "jpeg", "gif", "webp", "bmp", "ico",
         "zip", "tar", "gz", "rar", "7z", "apk", "jar", "class",
         "pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx",
-        "bin", "hex", "exe", "dll", "so", "o", "a", "db", "sqlite"
+        "bin", "hex", "exe", "dll", "so", "o", "a", "db", "sqlite",
+        "mcpack", "mcworld", "mctemplate", "mcaddon"
     )
     if (extension in binaryExts) return true
     
