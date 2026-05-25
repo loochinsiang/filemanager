@@ -110,7 +110,16 @@ class MainActivity : ComponentActivity() {
                                                 "editor" -> ScreenState.CodeEditor(targetFile)
                                                 "zip" -> ScreenState.ZipViewer(targetFile)
                                                 "image" -> ScreenState.ImageViewer(targetFile)
-                                                "sound" -> ScreenState.MusicPlayer(targetFile)
+                                                "sound" -> {
+                                                    val ext = targetFile.extension.lowercase(java.util.Locale.ROOT)
+                                                    if (ext in listOf("mp4", "mkv", "avi", "webm", "mov")) {
+                                                        ScreenState.MusicPlayer(targetFile)
+                                                    } else {
+                                                        com.example.AudioPlayerManager.playFile(targetFile)
+                                                        com.example.AudioPlayerManager.isFullPlayerVisible.value = true
+                                                        currentScreen
+                                                    }
+                                                }
                                                 "hex" -> ScreenState.HexEditor(targetFile)
                                                 else -> ScreenState.CodeEditor(targetFile)
                                             }
@@ -159,7 +168,9 @@ class MainActivity : ComponentActivity() {
                     val isPlaying by com.example.AudioPlayerManager.isPlaying
                     val progress by com.example.AudioPlayerManager.progress
                     val playingFile = com.example.AudioPlayerManager.currentFile.value
-                    if (currentScreen !is ScreenState.MusicPlayer && playingFile != null) {
+                    val isFullPlayerVisible by com.example.AudioPlayerManager.isFullPlayerVisible
+                    
+                    if (currentScreen !is ScreenState.MusicPlayer && playingFile != null && !isFullPlayerVisible) {
                         val insetsPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
                         Box(
                             modifier = Modifier
@@ -174,9 +185,23 @@ class MainActivity : ComponentActivity() {
                                 progress = progress,
                                 onClose = { com.example.AudioPlayerManager.fadeOutAndStop() },
                                 onPlayPause = { com.example.AudioPlayerManager.togglePlay() },
-                                onClick = { currentScreen = ScreenState.MusicPlayer(playingFile) },
+                                onClick = { com.example.AudioPlayerManager.isFullPlayerVisible.value = true },
                                 onNext = { com.example.AudioPlayerManager.player?.seekTo((com.example.AudioPlayerManager.player?.currentPosition ?: 0) + 10000) },
                                 onPrev = { com.example.AudioPlayerManager.player?.seekTo(0L.coerceAtLeast((com.example.AudioPlayerManager.player?.currentPosition ?: 0) - 10000)) }
+                            )
+                        }
+                    }
+                    
+                    // Full Audio Player Overlay
+                    androidx.compose.animation.AnimatedVisibility(
+                        visible = isFullPlayerVisible && playingFile != null,
+                        enter = androidx.compose.animation.slideInVertically(initialOffsetY = { it }),
+                        exit = androidx.compose.animation.slideOutVertically(targetOffsetY = { it })
+                    ) {
+                        if (playingFile != null) {
+                            MusicPlayerScreen(
+                                file = playingFile,
+                                onBack = { com.example.AudioPlayerManager.isFullPlayerVisible.value = false }
                             )
                         }
                     }

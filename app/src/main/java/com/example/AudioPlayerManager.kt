@@ -13,6 +13,7 @@ object AudioPlayerManager {
     var currentFile = mutableStateOf<File?>(null)
     var isPlaying = mutableStateOf(false)
     var progress = mutableStateOf(0f)
+    var isFullPlayerVisible = mutableStateOf(false)
     private var progressJob: Job? = null
 
     fun initialize(context: Context) {
@@ -82,6 +83,7 @@ object AudioPlayerManager {
         player?.stop()
         currentFile.value = null
         isPlaying.value = false
+        isFullPlayerVisible.value = false
         progressJob?.cancel()
         progress.value = 0f
     }

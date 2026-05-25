@@ -59,7 +59,7 @@ fun MiniAudioPlayer(
                     },
                     onDragEnd = {
                         coroutineScope.launch {
-                            if (offsetY.value > 150f) {
+                            if (offsetY.value > 100f) {
                                 offsetY.animateTo(300f)
                                 onClose()
                             } else if (offsetY.value < -20f) {
@@ -68,6 +68,11 @@ fun MiniAudioPlayer(
                             } else {
                                 offsetY.animateTo(0f)
                             }
+                        }
+                    },
+                    onDragCancel = {
+                        coroutineScope.launch {
+                            offsetY.animateTo(0f)
                         }
                     }
                 )

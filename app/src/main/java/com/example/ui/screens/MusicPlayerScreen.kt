@@ -29,6 +29,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player
@@ -37,6 +39,7 @@ import androidx.media3.ui.PlayerView
 import com.example.ui.theme.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import java.io.File
 import java.util.Locale
 
@@ -189,8 +192,42 @@ fun MusicPlayerScreen(
         }
     }
 
+    val coroutineScope = rememberCoroutineScope()
+    val offsetY = remember { androidx.compose.animation.core.Animatable(0f) }
+
     Scaffold(
-        modifier = modifier.fillMaxSize(),
+        modifier = modifier
+            .fillMaxSize()
+            .offset { androidx.compose.ui.unit.IntOffset(0, offsetY.value.toInt().coerceAtLeast(0)) }
+            .pointerInput(Unit) {
+                detectVerticalDragGestures(
+                    onVerticalDrag = { change, dragAmount ->
+                        if (!isVideo) {
+                            coroutineScope.launch {
+                                offsetY.snapTo((offsetY.value + dragAmount).coerceAtLeast(0f))
+                            }
+                        }
+                    },
+                    onDragEnd = {
+                        if (!isVideo) {
+                            coroutineScope.launch {
+                                if (offsetY.value > 300f) {
+                                    onBack()
+                                } else {
+                                    offsetY.animateTo(0f)
+                                }
+                            }
+                        }
+                    },
+                    onDragCancel = {
+                        if (!isVideo) {
+                            coroutineScope.launch {
+                                offsetY.animateTo(0f)
+                            }
+                        }
+                    }
+                )
+            },
         containerColor = if (isVideo) Color.Black else SleekBg
     ) { innerPadding ->
         if (isVideo) {
