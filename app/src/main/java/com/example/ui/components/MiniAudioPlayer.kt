@@ -49,25 +49,32 @@ fun MiniAudioPlayer(
             .height(64.dp)
             .offset { IntOffset(0, dragOffsetY.value.toInt()) }
             .alpha((1f - (dragOffsetY.value / 200f)).coerceIn(0f, 1f))
-            .pointerInput(Unit) {
+            .pointerInput(onClick, onClose) {
                 detectVerticalDragGestures(
                     onVerticalDrag = { change, dragAmount ->
                         change.consume()
-                        dragOffsetY.value = (dragOffsetY.value + dragAmount).coerceIn(-100f, 300f)
+                        dragOffsetY.value = (dragOffsetY.value + dragAmount).coerceIn(-120f, 300f)
                     },
                     onDragEnd = {
-                        if (dragOffsetY.value > 100f) {
-                            onClose()
-                            dragOffsetY.value = 0f
-                        } else if (dragOffsetY.value < -20f) {
-                            onClick()
-                            dragOffsetY.value = 0f
+                        val currentOffset = dragOffsetY.value
+                        if (currentOffset > 100f) {
+                            coroutineScope.launch {
+                                onClose()
+                                dragOffsetY.value = 0f
+                            }
+                        } else if (currentOffset < -30f) {
+                            coroutineScope.launch {
+                                onClick()
+                                dragOffsetY.value = 0f
+                            }
                         } else {
                             coroutineScope.launch {
                                 try {
-                                    val anim = androidx.compose.animation.core.Animatable(dragOffsetY.value)
-                                    anim.animateTo(0f) {
-                                        dragOffsetY.value = this.value
+                                    androidx.compose.animation.core.animate(
+                                        initialValue = dragOffsetY.value,
+                                        targetValue = 0f
+                                    ) { value, _ ->
+                                        dragOffsetY.value = value
                                     }
                                 } catch (e: Exception) {
                                     dragOffsetY.value = 0f

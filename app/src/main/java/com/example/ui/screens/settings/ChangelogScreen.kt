@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalMaterial3ExpressiveApi::class)
+
 package com.example.ui.screens.settings
 
 import androidx.compose.foundation.layout.*
@@ -13,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Locale
 
@@ -41,8 +44,15 @@ fun MarkdownText(
 fun ChangelogScreen(
     onBack: () -> Unit
 ) {
-    val releases = remember {
-        listOf(
+    val coroutineScope = rememberCoroutineScope()
+    var releases by remember { mutableStateOf<List<ReleaseInfo>>(emptyList()) }
+    var isLoading by remember { mutableStateOf(true) }
+    var error by remember { mutableStateOf<String?>(null) }
+
+    suspend fun loadReleases() {
+        isLoading = true
+        kotlinx.coroutines.delay(600)
+        releases = listOf(
             ReleaseInfo(
                 name = "v1.3.1 (Current Release)",
                 tagName = "v1.3.1",
@@ -62,6 +72,12 @@ fun ChangelogScreen(
                 body = "• Initial release of FileSmith Studio!\n• Fast file exploration, folder tree browsing, image visualizers, low-level HEX analyzers, and integrated media playback engines."
             )
         )
+        error = null
+        isLoading = false
+    }
+
+    LaunchedEffect(Unit) {
+        loadReleases()
     }
 
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
@@ -89,28 +105,58 @@ fun ChangelogScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            if (releases.isEmpty()) {
-                Text(
-                    text = "No releases found.",
-                    modifier = Modifier
-                        .align(Alignment.Center)
-                        .padding(16.dp),
-                    style = MaterialTheme.typography.bodyLarge
-                )
-            } else {
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    item { Spacer(modifier = Modifier.height(8.dp)) }
-                    
-                    items(releases) { release ->
-                        ReleaseCard(release = release)
+            when {
+                isLoading -> {
+                    CircularWavyProgressIndicator(
+                        modifier = Modifier.align(Alignment.Center)
+                    )
+                }
+                error != null && releases.isEmpty() -> {
+                    Column(
+                        modifier = Modifier
+                            .align(Alignment.Center)
+                            .padding(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "Error loading changelog",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        TextButton(onClick = {
+                            coroutineScope.launch {
+                                loadReleases()
+                            }
+                        }) {
+                            Text("Retry")
+                        }
                     }
-                    
-                    item { Spacer(modifier = Modifier.height(8.dp)) }
+                }
+                releases.isEmpty() -> {
+                    Text(
+                        text = "No releases",
+                        modifier = Modifier
+                            .align(Alignment.Center)
+                            .padding(16.dp),
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                }
+                else -> {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        item { Spacer(modifier = Modifier.height(8.dp)) }
+                        
+                        items(releases) { release ->
+                            ReleaseCard(release = release)
+                        }
+                        
+                        item { Spacer(modifier = Modifier.height(8.dp)) }
+                    }
                 }
             }
         }
@@ -159,7 +205,7 @@ private fun ReleaseCard(release: ReleaseInfo) {
                 )
             }
             
-            if (!release.body.isBlank()) {
+            if (!release.body.isNullOrBlank()) {
                 Spacer(modifier = Modifier.height(8.dp))
                 MarkdownText(
                     markdown = release.body,

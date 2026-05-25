@@ -940,6 +940,24 @@ fun MainFileManagerScreen(
                 }
                 MainTab.SETTINGS -> {
                     // Build the M3 Adaptive Settings layout dynamically!
+                    val localeManager = remember { com.example.ui.components.LocaleManager.getInstance(context) }
+                    val currentLanguage by localeManager.currentLanguage.collectAsState()
+                    val changeState by localeManager.changeState.collectAsState()
+                    val currentLanguageDisplay = remember(currentLanguage) {
+                        val selectedCode = localeManager.getSelectedLanguageCode()
+                        localeManager.getAvailableLanguages()
+                            .find { it.code == selectedCode }
+                            ?.let { language ->
+                                if (language.isSystemDefault) {
+                                    language.displayName
+                                } else {
+                                    "${language.displayName} ${language.flag}".trim()
+                                }
+                            } ?: selectedCode
+                    }
+                    val isChanging = changeState is com.example.ui.components.LanguageChangeState.Changing
+                    var showLanguageSelector by remember { mutableStateOf(false) }
+
                     val profileState = remember {
                         SettingsProfileState(
                             isLoading = false,
@@ -987,7 +1005,7 @@ fun MainFileManagerScreen(
                         )
                     }
 
-                    val groups = remember(hasStoragePermission) {
+                    val groups = remember(hasStoragePermission, isChanging, currentLanguageDisplay) {
                         listOf(
                             SettingsGroup(
                                 title = "App Properties",
@@ -1005,6 +1023,17 @@ fun MainFileManagerScreen(
                                         subtitle = "v1.3.1 - Expressive",
                                         accentColor = SleekTextAlt,
                                         onClick = {}
+                                    ),
+                                    SettingsItem(
+                                        icon = Icons.Default.Translate,
+                                        title = context.getString(com.example.R.string.language),
+                                        subtitle = if (isChanging) "Changing language..." else currentLanguageDisplay,
+                                        accentColor = SleekFolderText,
+                                        onClick = {
+                                            if (!isChanging) {
+                                                showLanguageSelector = true
+                                            }
+                                        }
                                     ),
                                     SettingsItem(
                                         icon = Icons.Default.Storage,
@@ -1042,11 +1071,14 @@ fun MainFileManagerScreen(
 
                     AdaptiveSettingsLayout(
                         state = settingsContentState,
-                        modifier = Modifier.fillMaxSize(),
-                        additionalContent = {
-                            com.example.ui.components.LanguagePreference()
-                        }
+                        modifier = Modifier.fillMaxSize()
                     )
+
+                    if (showLanguageSelector) {
+                        com.example.ui.components.LanguageSelector(
+                            onDismiss = { showLanguageSelector = false }
+                        )
+                    }
                 }
             }
         }
