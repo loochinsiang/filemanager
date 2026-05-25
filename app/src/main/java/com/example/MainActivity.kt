@@ -32,6 +32,7 @@ sealed class ScreenState {
     data class ImageViewer(val file: File) : ScreenState()
     data class MusicPlayer(val file: File) : ScreenState()
     data class HexEditor(val file: File) : ScreenState()
+    data class FontViewer(val file: File) : ScreenState()
 }
 
 class MainActivity : ComponentActivity() {
@@ -121,6 +122,7 @@ class MainActivity : ComponentActivity() {
                                                     }
                                                 }
                                                 "hex" -> ScreenState.HexEditor(targetFile)
+                                                "font" -> ScreenState.FontViewer(targetFile)
                                                 else -> ScreenState.CodeEditor(targetFile)
                                             }
                                         }
@@ -157,6 +159,12 @@ class MainActivity : ComponentActivity() {
                             }
                             is ScreenState.HexEditor -> {
                                 HexEditorScreen(
+                                    file = targetScreen.file,
+                                    onBack = { currentScreen = ScreenState.Main }
+                                )
+                            }
+                            is ScreenState.FontViewer -> {
+                                FontViewerScreen(
                                     file = targetScreen.file,
                                     onBack = { currentScreen = ScreenState.Main }
                                 )

@@ -105,7 +105,7 @@ fun MainFileManagerScreen(
             ext == "svg" -> onOpenFile(file, "editor")
             ext in listOf("wav", "mp3", "m4a", "ogg", "flac", "mp4", "mkv") -> onOpenFile(file, "sound")
             ext == "bin" || ext == "hex" -> onOpenFile(file, "hex")
-            ext in listOf("ttf", "otf") -> onOpenFile(file, "hex")
+            ext in listOf("ttf", "otf") -> onOpenFile(file, "font")
             ext == "apk" -> {
                 installApk(context, file)
             }
@@ -266,12 +266,15 @@ fun MainFileManagerScreen(
                     Column(
                         modifier = Modifier
                             .background(SleekBg)
-                            .padding(top = 16.dp)
+                            .padding(top = if (isLandscape) 4.dp else 16.dp)
                     ) {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 24.dp, vertical = 12.dp),
+                                .padding(
+                                    horizontal = if (isLandscape) 16.dp else 24.dp,
+                                    vertical = if (isLandscape) 4.dp else 12.dp
+                                ),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
@@ -284,30 +287,33 @@ fun MainFileManagerScreen(
                                         onClick = {
                                             currentDirectory.parentFile?.let { onDirectoryChange(it) }
                                         },
-                                        modifier = Modifier.size(40.dp)
+                                        modifier = Modifier.size(if (isLandscape) 32.dp else 40.dp)
                                     ) {
                                         Icon(
                                             imageVector = Icons.Default.ArrowBack,
                                             contentDescription = "Parent Directory",
-                                            tint = SleekTextMain
+                                            tint = SleekTextMain,
+                                            modifier = Modifier.size(if (isLandscape) 18.dp else 24.dp)
                                         )
                                     }
                                 }
                                 Column {
                                     Text(
                                         text = androidx.compose.ui.res.stringResource(com.example.R.string.header_explorer),
-                                        style = MaterialTheme.typography.headlineMedium,
+                                        style = if (isLandscape) MaterialTheme.typography.titleMedium else MaterialTheme.typography.headlineMedium,
                                         fontWeight = FontWeight.Bold,
                                         color = SleekTextMain,
                                         letterSpacing = (-0.5).sp
                                     )
-                                    Text(
-                                        text = if (!hasStoragePermission) "Access Required" else androidx.compose.ui.res.stringResource(com.example.R.string.subtitle_in, (if (currentDirectory.absolutePath == activeRoot.absolutePath) "root" else currentDirectory.name)),
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = SleekTextSub,
-                                        modifier = Modifier.padding(top = 4.dp)
-                                    )
+                                    if (!isLandscape) {
+                                        Text(
+                                            text = if (!hasStoragePermission) "Access Required" else androidx.compose.ui.res.stringResource(com.example.R.string.subtitle_in, (if (currentDirectory.absolutePath == activeRoot.absolutePath) "root" else currentDirectory.name)),
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = SleekTextSub,
+                                            modifier = Modifier.padding(top = 4.dp)
+                                        )
+                                    }
                                 }
                             }
                             
@@ -316,16 +322,30 @@ fun MainFileManagerScreen(
                                     IconButton(
                                         onClick = { showCreateDirDialog = true },
                                         colors = IconButtonDefaults.iconButtonColors(containerColor = SleekFolderBg),
-                                        modifier = Modifier.testTag("create_folder_button")
+                                        modifier = Modifier
+                                            .testTag("create_folder_button")
+                                            .size(if (isLandscape) 32.dp else 40.dp)
                                     ) {
-                                        Icon(Icons.Default.CreateNewFolder, contentDescription = "New Directory", tint = SleekFolderText)
+                                        Icon(
+                                            imageVector = Icons.Default.CreateNewFolder,
+                                            contentDescription = "New Directory",
+                                            tint = SleekFolderText,
+                                            modifier = Modifier.size(if (isLandscape) 18.dp else 24.dp)
+                                        )
                                     }
                                     IconButton(
                                         onClick = { showCreateFileDialog = true },
                                         colors = IconButtonDefaults.iconButtonColors(containerColor = SleekCodeBg),
-                                        modifier = Modifier.testTag("create_file_button")
+                                        modifier = Modifier
+                                            .testTag("create_file_button")
+                                            .size(if (isLandscape) 32.dp else 40.dp)
                                     ) {
-                                        Icon(Icons.Default.NoteAdd, contentDescription = "New Source File", tint = SleekCodeText)
+                                        Icon(
+                                            imageVector = Icons.Default.NoteAdd,
+                                            contentDescription = "New Source File",
+                                            tint = SleekCodeText,
+                                            modifier = Modifier.size(if (isLandscape) 18.dp else 24.dp)
+                                        )
                                     }
                                 }
                             }
@@ -344,30 +364,35 @@ fun MainFileManagerScreen(
                     Column(
                         modifier = Modifier
                             .background(SleekBg)
-                            .padding(top = 16.dp)
+                            .padding(top = if (isLandscape) 4.dp else 16.dp)
                     ) {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 24.dp, vertical = 20.dp),
+                                .padding(
+                                    horizontal = if (isLandscape) 16.dp else 24.dp,
+                                    vertical = if (isLandscape) 4.dp else 20.dp
+                                ),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Column {
                                 Text(
                                     text = androidx.compose.ui.res.stringResource(com.example.R.string.title_recent_history),
-                                    style = MaterialTheme.typography.headlineMedium,
+                                    style = if (isLandscape) MaterialTheme.typography.titleMedium else MaterialTheme.typography.headlineMedium,
                                     fontWeight = FontWeight.Bold,
                                     color = SleekTextMain,
                                     letterSpacing = (-0.5).sp
                                 )
-                                Text(
-                                    text = androidx.compose.ui.res.stringResource(com.example.R.string.msg_recent_elements),
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Medium,
-                                    color = SleekTextSub,
-                                    modifier = Modifier.padding(top = 4.dp)
-                                )
+                                if (!isLandscape) {
+                                    Text(
+                                        text = androidx.compose.ui.res.stringResource(com.example.R.string.msg_recent_elements),
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        color = SleekTextSub,
+                                        modifier = Modifier.padding(top = 4.dp)
+                                    )
+                                }
                             }
 
                             IconButton(
@@ -377,9 +402,10 @@ fun MainFileManagerScreen(
                                     recentFilesKey++
                                     Toast.makeText(context, "History cleared successfully", Toast.LENGTH_SHORT).show()
                                 },
-                                colors = IconButtonDefaults.iconButtonColors(containerColor = SleekOtherBg)
+                                colors = IconButtonDefaults.iconButtonColors(containerColor = SleekOtherBg),
+                                modifier = Modifier.size(if (isLandscape) 32.dp else 40.dp)
                             ) {
-                                Icon(Icons.Default.DeleteSweep, contentDescription = "Clear History", tint = SleekTextAlt)
+                                Icon(Icons.Default.DeleteSweep, contentDescription = "Clear History", tint = SleekTextAlt, modifier = Modifier.size(if (isLandscape) 18.dp else 24.dp))
                             }
                         }
                     }
@@ -388,29 +414,34 @@ fun MainFileManagerScreen(
                     Column(
                         modifier = Modifier
                             .background(SleekBg)
-                            .padding(top = 16.dp)
+                            .padding(top = if (isLandscape) 4.dp else 16.dp)
                     ) {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 24.dp, vertical = 20.dp),
+                                .padding(
+                                    horizontal = if (isLandscape) 16.dp else 24.dp,
+                                    vertical = if (isLandscape) 4.dp else 20.dp
+                                ),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Column {
                                 Text(
                                     text = "Studio Tools",
-                                    style = MaterialTheme.typography.headlineMedium,
+                                    style = if (isLandscape) MaterialTheme.typography.titleMedium else MaterialTheme.typography.headlineMedium,
                                     fontWeight = FontWeight.Bold,
                                     color = SleekTextMain,
                                     letterSpacing = (-0.5).sp
                                 )
-                                Text(
-                                    text = "Advanced integrated diagnostics utilities",
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Medium,
-                                    color = SleekTextSub,
-                                    modifier = Modifier.padding(top = 4.dp)
-                                )
+                                if (!isLandscape) {
+                                    Text(
+                                        text = "Advanced integrated diagnostics utilities",
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        color = SleekTextSub,
+                                        modifier = Modifier.padding(top = 4.dp)
+                                    )
+                                }
                             }
                         }
                     }
@@ -419,29 +450,34 @@ fun MainFileManagerScreen(
                     Column(
                         modifier = Modifier
                             .background(SleekBg)
-                            .padding(top = 16.dp)
+                            .padding(top = if (isLandscape) 4.dp else 16.dp)
                     ) {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 24.dp, vertical = 20.dp),
+                                .padding(
+                                    horizontal = if (isLandscape) 16.dp else 24.dp,
+                                    vertical = if (isLandscape) 4.dp else 20.dp
+                                ),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Column {
                                 Text(
                                     text = "Settings",
-                                    style = MaterialTheme.typography.headlineMedium,
+                                    style = if (isLandscape) MaterialTheme.typography.titleMedium else MaterialTheme.typography.headlineMedium,
                                     fontWeight = FontWeight.Bold,
                                     color = SleekTextMain,
                                     letterSpacing = (-0.5).sp
                                 )
-                                Text(
-                                    text = "Properties, permissions, and app reset",
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Medium,
-                                    color = SleekTextSub,
-                                    modifier = Modifier.padding(top = 4.dp)
-                                )
+                                if (!isLandscape) {
+                                    Text(
+                                        text = "Properties, permissions, and app reset",
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        color = SleekTextSub,
+                                        modifier = Modifier.padding(top = 4.dp)
+                                    )
+                                }
                             }
                         }
                     }
@@ -490,13 +526,21 @@ fun MainFileManagerScreen(
             if (activeTab == MainTab.FILES && hasStoragePermission) {
                 val isMiniPlayerActive = com.example.AudioPlayerManager.currentFile.value != null && 
                                          !com.example.AudioPlayerManager.isFullPlayerVisible.value
+                val animatedBottomPadding by androidx.compose.animation.core.animateDpAsState(
+                    targetValue = if (isMiniPlayerActive) 80.dp else 0.dp,
+                    animationSpec = androidx.compose.animation.core.spring(
+                        dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
+                        stiffness = androidx.compose.animation.core.Spring.StiffnessLow
+                    ),
+                    label = "fab_bottom_padding"
+                )
                 FloatingActionButton(
                     onClick = { showCreateFileDialog = true },
                     containerColor = SleekFolderBg,
                     contentColor = SleekFolderText,
                     modifier = Modifier
                         .testTag("floating_add_button")
-                        .padding(bottom = if (isMiniPlayerActive) 80.dp else 0.dp)
+                        .padding(bottom = animatedBottomPadding)
                 ) {
                     Icon(Icons.Default.Add, contentDescription = "Add Item")
                 }
@@ -1363,10 +1407,14 @@ fun BreadcrumbsRow(
         list
     }
 
+    val isLandscape = androidx.compose.ui.platform.LocalConfiguration.current.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
     FlowRow(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 24.dp, vertical = 6.dp),
+            .padding(
+                horizontal = if (isLandscape) 16.dp else 24.dp,
+                vertical = if (isLandscape) 2.dp else 6.dp
+            ),
         horizontalArrangement = Arrangement.spacedBy(4.dp),
         verticalArrangement = Arrangement.Center
     ) {
@@ -1461,7 +1509,11 @@ fun FileElementRow(
                 val date = Date(file.lastModified())
                 val format = SimpleDateFormat("MM-dd HH:mm", Locale.getDefault())
                 val typeLabel = when {
-            ext in listOf("zip", "mcpack", "mcworld", "mctemplate", "mcaddon") -> "Archive"
+            ext == "zip" -> "Archive"
+            ext == "mcpack" -> "MCPACK"
+            ext == "mcworld" -> "MCWORLD"
+            ext == "mctemplate" -> "MCTEMPLATE"
+            ext == "mcaddon" -> "MCADDON"
             ext in listOf("mp3", "wav", "m4a", "ogg", "flac", "mp4", "mkv") -> "Media"
             ext == "svg" -> "SVG"
             ext in listOf("png", "jpg", "jpeg") -> "Image"
