@@ -160,16 +160,19 @@ class MainActivity : ComponentActivity() {
                     val progress by com.example.AudioPlayerManager.progress
                     val playingFile = com.example.AudioPlayerManager.currentFile.value
                     if (currentScreen !is ScreenState.MusicPlayer && playingFile != null) {
+                        val insetsPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .padding(16.dp),
+                                .padding(16.dp)
+                                .padding(bottom = insetsPadding + 80.dp),
                             contentAlignment = androidx.compose.ui.Alignment.BottomCenter
                         ) {
                             com.example.ui.components.MiniAudioPlayer(
                                 file = playingFile,
                                 isPlaying = isPlaying,
                                 progress = progress,
+                                onClose = { com.example.AudioPlayerManager.fadeOutAndStop() },
                                 onPlayPause = { com.example.AudioPlayerManager.togglePlay() },
                                 onClick = { currentScreen = ScreenState.MusicPlayer(playingFile) },
                                 onNext = { com.example.AudioPlayerManager.player?.seekTo((com.example.AudioPlayerManager.player?.currentPosition ?: 0) + 10000) },

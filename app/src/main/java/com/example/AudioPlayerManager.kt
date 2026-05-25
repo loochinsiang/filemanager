@@ -66,10 +66,24 @@ object AudioPlayerManager {
         if (isPlaying.value) pause() else resume()
     }
 
+    fun fadeOutAndStop() {
+        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch {
+            val startVol = player?.volume ?: 1f
+            for (i in 10 downTo 0) {
+                player?.volume = startVol * (i / 10f)
+                kotlinx.coroutines.delay(50)
+            }
+            stop()
+            player?.volume = 1f // restore
+        }
+    }
+
     fun stop() {
         player?.stop()
         currentFile.value = null
         isPlaying.value = false
+        progressJob?.cancel()
+        progress.value = 0f
     }
 
     fun release() {

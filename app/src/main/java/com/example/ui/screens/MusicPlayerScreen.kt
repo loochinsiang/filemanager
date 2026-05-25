@@ -67,20 +67,6 @@ fun MusicPlayerScreen(
         }
     }
     
-    var isPlaying by remember { mutableStateOf(false) }
-    var currentProgress by remember { mutableStateOf(0f) }
-    var currentTimeLabel by remember { mutableStateOf("00:00") }
-    var totalTimeLabel by remember { mutableStateOf("00:00") }
-    var durationMs by remember { mutableStateOf(0L) }
-    var showOverlay by remember { mutableStateOf(true) }
-
-    // Audio effects state
-    var pitch by remember { mutableFloatStateOf(1.0f) }
-    var tempo by remember { mutableFloatStateOf(1.0f) }
-    var lockPitchTempo by remember { mutableStateOf(false) }
-    var enableReverb by remember { mutableStateOf(false) }
-    var enableLimiter by remember { mutableStateOf(false) }
-
     val exoPlayer = remember {
         if (!isVideo) {
             com.example.AudioPlayerManager.initialize(context)
@@ -96,7 +82,21 @@ fun MusicPlayerScreen(
             }
         }
     }
-    
+
+    var isPlaying by remember(exoPlayer) { mutableStateOf(exoPlayer.isPlaying) }
+    var durationMs by remember(exoPlayer) { mutableStateOf(exoPlayer.duration.coerceAtLeast(0L)) }
+    var currentProgress by remember(exoPlayer) { mutableStateOf(if (durationMs > 0) exoPlayer.currentPosition.toFloat() / durationMs else 0f) }
+    var currentTimeLabel by remember(exoPlayer) { mutableStateOf(String.format(Locale.ROOT, "%02d:%02d", (exoPlayer.currentPosition / 1000) / 60, (exoPlayer.currentPosition / 1000) % 60)) }
+    var totalTimeLabel by remember(exoPlayer) { mutableStateOf(String.format(Locale.ROOT, "%02d:%02d", (durationMs / 1000) / 60, (durationMs / 1000) % 60)) }
+    var showOverlay by remember { mutableStateOf(true) }
+
+    // Audio effects state
+    var pitch by remember { mutableFloatStateOf(1.0f) }
+    var tempo by remember { mutableFloatStateOf(1.0f) }
+    var lockPitchTempo by remember { mutableStateOf(false) }
+    var enableReverb by remember { mutableStateOf(false) }
+    var enableLimiter by remember { mutableStateOf(false) }
+
     var reverbRef by remember { mutableStateOf<PresetReverb?>(null) }
     var limiterRef by remember { mutableStateOf<LoudnessEnhancer?>(null) }
 

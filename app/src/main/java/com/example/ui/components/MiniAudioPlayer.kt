@@ -20,6 +20,12 @@ import androidx.compose.material.icons.filled.MusicNote
 import com.example.R
 import androidx.compose.foundation.basicMarquee
 
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import kotlinx.coroutines.launch
+import androidx.compose.ui.unit.IntOffset
+
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun MiniAudioPlayer(
@@ -29,15 +35,44 @@ fun MiniAudioPlayer(
     onClick: () -> Unit,
     onNext: () -> Unit,
     onPrev: () -> Unit,
-    progress: Float = 0f
+    progress: Float = 0f,
+    onClose: () -> Unit
 ) {
     val containerBg = Color(0xFFFBEBE8)
     val iconTint = Color(0xFF241414)
+    val offsetY = androidx.compose.runtime.remember { androidx.compose.animation.core.Animatable(0f) }
+    val coroutineScope = androidx.compose.runtime.rememberCoroutineScope()
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .height(64.dp)
+            .offset { IntOffset(0, offsetY.value.toInt()) }
+            .alpha(1f - (offsetY.value / 200f).coerceIn(0f, 1f))
+            .pointerInput(Unit) {
+                detectVerticalDragGestures(
+                    onVerticalDrag = { change, dragAmount ->
+                        coroutineScope.launch {
+                            val newOffset = (offsetY.value + dragAmount).coerceAtLeast(-50f)
+                            offsetY.snapTo(newOffset)
+                        }
+                    },
+                    onDragEnd = {
+                        coroutineScope.launch {
+                            if (offsetY.value > 150f) {
+                                offsetY.animateTo(300f)
+                                onClose()
+                                offsetY.snapTo(0f)
+                            } else if (offsetY.value < -20f) {
+                                offsetY.animateTo(0f)
+                                onClick()
+                            } else {
+                                offsetY.animateTo(0f)
+                            }
+                        }
+                    }
+                )
+            }
             .clip(RoundedCornerShape(32.dp))
             .background(containerBg)
             .clickable { onClick() }
