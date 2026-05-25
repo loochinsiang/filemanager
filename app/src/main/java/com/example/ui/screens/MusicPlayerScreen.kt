@@ -36,6 +36,7 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
 import com.example.ui.theme.*
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import java.io.File
 import java.util.Locale
 
@@ -144,15 +145,19 @@ fun MusicPlayerScreen(
         limiterRef?.enabled = enableLimiter
     }
 
-    LaunchedEffect(isPlaying) {
-        while (isPlaying) {
+    LaunchedEffect(exoPlayer) {
+        while (isActive) {
             val dur = exoPlayer.duration.toFloat()
             if (dur > 0f) {
+                durationMs = exoPlayer.duration
                 val current = exoPlayer.currentPosition.toFloat()
                 currentProgress = current / dur
                 val m = (exoPlayer.currentPosition / 1000) / 60
                 val s = (exoPlayer.currentPosition / 1000) % 60
                 currentTimeLabel = String.format(Locale.ROOT, "%02d:%02d", m, s)
+                val totalM = (durationMs / 1000) / 60
+                val totalS = (durationMs / 1000) % 60
+                totalTimeLabel = String.format(Locale.ROOT, "%02d:%02d", totalM, totalS)
             }
             delay(250)
         }

@@ -165,7 +165,7 @@ class MainActivity : ComponentActivity() {
                             modifier = Modifier
                                 .fillMaxSize()
                                 .padding(16.dp)
-                                .padding(bottom = insetsPadding + 80.dp),
+                                .padding(bottom = insetsPadding),
                             contentAlignment = androidx.compose.ui.Alignment.BottomCenter
                         ) {
                             com.example.ui.components.MiniAudioPlayer(

@@ -38,8 +38,8 @@ fun MiniAudioPlayer(
     progress: Float = 0f,
     onClose: () -> Unit
 ) {
-    val containerBg = Color(0xFFFBEBE8)
-    val iconTint = Color(0xFF241414)
+    val containerBg = com.example.ui.theme.SleekBottomNavBg
+    val iconTint = com.example.ui.theme.SleekTextMain
     val offsetY = androidx.compose.runtime.remember { androidx.compose.animation.core.Animatable(0f) }
     val coroutineScope = androidx.compose.runtime.rememberCoroutineScope()
 
@@ -53,7 +53,7 @@ fun MiniAudioPlayer(
                 detectVerticalDragGestures(
                     onVerticalDrag = { change, dragAmount ->
                         coroutineScope.launch {
-                            val newOffset = (offsetY.value + dragAmount).coerceAtLeast(-50f)
+                            val newOffset = (offsetY.value + dragAmount)
                             offsetY.snapTo(newOffset)
                         }
                     },
@@ -62,7 +62,6 @@ fun MiniAudioPlayer(
                             if (offsetY.value > 150f) {
                                 offsetY.animateTo(300f)
                                 onClose()
-                                offsetY.snapTo(0f)
                             } else if (offsetY.value < -20f) {
                                 offsetY.animateTo(0f)
                                 onClick()
@@ -91,8 +90,8 @@ fun MiniAudioPlayer(
                 CircularWavyProgressIndicator(
                     progress = { progress },
                     modifier = Modifier.fillMaxSize(),
-                    color = Color(0xFF9E403B),
-                    trackColor = Color(0xFFE5C9C5)
+                    color = com.example.ui.theme.SleekPrimary,
+                    trackColor = com.example.ui.theme.SleekBorderLight
                 )
 
                 Box(
@@ -100,10 +99,10 @@ fun MiniAudioPlayer(
                     modifier = Modifier
                         .size(37.dp)
                         .clip(CircleShape)
-                        .background(Color(0xFFE5C9C5))
+                        .background(com.example.ui.theme.SleekFolderBg)
                         .border(
                             width = 1.dp,
-                            color = Color(0xFFE5C9C5).copy(alpha = 0.5f),
+                            color = com.example.ui.theme.SleekFolderText.copy(alpha = 0.2f),
                             shape = CircleShape
                         )
                 ) {
@@ -111,7 +110,7 @@ fun MiniAudioPlayer(
                         imageVector = androidx.compose.material.icons.Icons.Default.MusicNote,
                         contentDescription = null,
                         modifier = Modifier.size(20.dp),
-                        tint = Color.White
+                        tint = com.example.ui.theme.SleekFolderText
                     )
                 }
             }
@@ -134,7 +133,7 @@ fun MiniAudioPlayer(
                 Text(
                     text = "Audio File",
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color(0xFF755B58),
+                    color = com.example.ui.theme.SleekTextSub,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -152,7 +151,7 @@ fun MiniAudioPlayer(
                     modifier = Modifier
                         .size(36.dp)
                         .clip(CircleShape)
-                        .border(1.dp, Color(0xFFE5C9C5), CircleShape)
+                        .border(1.dp, com.example.ui.theme.SleekBorderLight, CircleShape)
                         .clickable { onPrev() }
                 ) {
                     Icon(
@@ -168,8 +167,8 @@ fun MiniAudioPlayer(
                     modifier = Modifier
                         .size(40.dp)
                         .clip(CircleShape)
-                        .background(Color.White)
-                        .border(1.dp, Color(0xFFE5C9C5), CircleShape)
+                        .background(com.example.ui.theme.SleekSurface)
+                        .border(1.dp, com.example.ui.theme.SleekBorderLight, CircleShape)
                         .clickable { onPlayPause() }
                 ) {
                     Icon(
@@ -185,7 +184,7 @@ fun MiniAudioPlayer(
                     modifier = Modifier
                         .size(36.dp)
                         .clip(CircleShape)
-                        .border(1.dp, Color(0xFFE5C9C5), CircleShape)
+                        .border(1.dp, com.example.ui.theme.SleekBorderLight, CircleShape)
                         .clickable { onNext() }
                 ) {
                     Icon(
