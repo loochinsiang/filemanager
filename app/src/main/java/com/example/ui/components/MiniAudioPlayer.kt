@@ -9,6 +9,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -43,13 +45,16 @@ fun MiniAudioPlayer(
     val dragOffsetY = androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(0f) }
     val coroutineScope = androidx.compose.runtime.rememberCoroutineScope()
 
+    val currentOnClick by androidx.compose.runtime.rememberUpdatedState(onClick)
+    val currentOnClose by androidx.compose.runtime.rememberUpdatedState(onClose)
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .height(64.dp)
             .offset { IntOffset(0, dragOffsetY.value.toInt()) }
             .alpha((1f - (dragOffsetY.value / 200f)).coerceIn(0f, 1f))
-            .pointerInput(onClick, onClose) {
+            .pointerInput(Unit) {
                 detectVerticalDragGestures(
                     onVerticalDrag = { change, dragAmount ->
                         change.consume()
@@ -58,15 +63,11 @@ fun MiniAudioPlayer(
                     onDragEnd = {
                         val currentOffset = dragOffsetY.value
                         if (currentOffset > 100f) {
-                            coroutineScope.launch {
-                                onClose()
-                                dragOffsetY.value = 0f
-                            }
+                            dragOffsetY.value = 0f
+                            currentOnClose()
                         } else if (currentOffset < -30f) {
-                            coroutineScope.launch {
-                                onClick()
-                                dragOffsetY.value = 0f
-                            }
+                            dragOffsetY.value = 0f
+                            currentOnClick()
                         } else {
                             coroutineScope.launch {
                                 try {

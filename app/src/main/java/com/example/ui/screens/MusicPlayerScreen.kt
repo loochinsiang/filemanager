@@ -156,11 +156,15 @@ fun MusicPlayerScreen(
     }
 
     LaunchedEffect(enableReverb) {
-        reverbRef?.enabled = enableReverb
+        try {
+            reverbRef?.enabled = enableReverb
+        } catch (_: Exception) {}
     }
 
     LaunchedEffect(enableLimiter) {
-        limiterRef?.enabled = enableLimiter
+        try {
+            limiterRef?.enabled = enableLimiter
+        } catch (_: Exception) {}
     }
 
     LaunchedEffect(exoPlayer) {
