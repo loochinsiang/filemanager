@@ -105,6 +105,7 @@ fun MainFileManagerScreen(
             ext == "svg" -> onOpenFile(file, "editor")
             ext in listOf("wav", "mp3", "m4a", "ogg", "flac", "mp4", "mkv") -> onOpenFile(file, "sound")
             ext == "bin" || ext == "hex" -> onOpenFile(file, "hex")
+            ext in listOf("ttf", "otf") -> onOpenFile(file, "hex")
             ext == "apk" -> {
                 installApk(context, file)
             }
@@ -487,11 +488,15 @@ fun MainFileManagerScreen(
         },
         floatingActionButton = {
             if (activeTab == MainTab.FILES && hasStoragePermission) {
+                val isMiniPlayerActive = com.example.AudioPlayerManager.currentFile.value != null && 
+                                         !com.example.AudioPlayerManager.isFullPlayerVisible.value
                 FloatingActionButton(
                     onClick = { showCreateFileDialog = true },
                     containerColor = SleekFolderBg,
                     contentColor = SleekFolderText,
-                    modifier = Modifier.testTag("floating_add_button")
+                    modifier = Modifier
+                        .testTag("floating_add_button")
+                        .padding(bottom = if (isMiniPlayerActive) 80.dp else 0.dp)
                 ) {
                     Icon(Icons.Default.Add, contentDescription = "Add Item")
                 }
@@ -1090,7 +1095,7 @@ fun MainFileManagerScreen(
                 OutlinedTextField(
                     value = newItemName,
                     onValueChange = { newItemName = it },
-                    placeholder = { Text("util.kt / vector.svg ...", color = SleekTextSub) },
+                    placeholder = { Text(androidx.compose.ui.res.stringResource(com.example.R.string.placeholder_file_name), color = SleekTextSub) },
                     singleLine = true,
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = SleekFolderText,
@@ -1462,6 +1467,8 @@ fun FileElementRow(
             ext in listOf("png", "jpg", "jpeg") -> "Image"
             ext in listOf("kt", "java", "js") -> "Kotlin"
             ext == "apk" -> "APK"
+            ext == "json" -> "JSON"
+            ext in listOf("ttf", "otf") -> "Font"
             else -> "Binary"
         }
                 "$typeLabel · $sizeKb KB · ${format.format(date)}"
