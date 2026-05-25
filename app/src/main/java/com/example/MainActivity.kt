@@ -14,10 +14,10 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
 import com.example.ui.screens.*
@@ -154,6 +154,28 @@ class MainActivity : ComponentActivity() {
                             }
                         }
                     }
+                    
+                    // Mini Player overlay for audio
+                    val isPlaying by com.example.AudioPlayerManager.isPlaying
+                    val playingFile = com.example.AudioPlayerManager.currentFile.value
+                    if (currentScreen !is ScreenState.MusicPlayer && playingFile != null) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(16.dp),
+                            contentAlignment = androidx.compose.ui.Alignment.BottomCenter
+                        ) {
+                            com.example.ui.components.MiniAudioPlayer(
+                                file = playingFile,
+                                isPlaying = isPlaying,
+                                onPlayPause = { com.example.AudioPlayerManager.togglePlay() },
+                                onClick = { currentScreen = ScreenState.MusicPlayer(playingFile) },
+                                onNext = { com.example.AudioPlayerManager.player?.seekTo((com.example.AudioPlayerManager.player?.currentPosition ?: 0) + 10000) },
+                                onPrev = { com.example.AudioPlayerManager.player?.seekTo(0L.coerceAtLeast((com.example.AudioPlayerManager.player?.currentPosition ?: 0) - 10000)) }
+                            )
+                        }
+                    }
+                    
                 } // ends else block
             }
         }

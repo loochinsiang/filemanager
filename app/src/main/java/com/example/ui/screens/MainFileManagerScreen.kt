@@ -92,7 +92,15 @@ fun MainFileManagerScreen(
     val handleFileOpen = { file: File ->
         val ext = file.extension.lowercase(Locale.ROOT)
         when {
-            ext in listOf("zip", "mcpack", "mcworld", "mctemplate", "mcaddon") -> onOpenFile(file, "zip")
+            ext in listOf("mcpack", "mcworld", "mctemplate", "mcaddon") -> {
+                val intent = Intent(Intent.ACTION_VIEW)
+                val authority = "${context.packageName}.fileprovider"
+                val fileUri = androidx.core.content.FileProvider.getUriForFile(context, authority, file)
+                intent.setDataAndType(fileUri, "application/octet-stream")
+                intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                context.startActivity(Intent.createChooser(intent, "Open with Minecraft..."))
+            }
+            ext == "zip" -> onOpenFile(file, "zip")
             ext in listOf("png", "jpg", "jpeg", "webp") -> onOpenFile(file, "image")
             ext == "svg" -> onOpenFile(file, "editor")
             ext in listOf("wav", "mp3", "m4a", "ogg", "flac", "mp4", "mkv") -> onOpenFile(file, "sound")
@@ -695,6 +703,23 @@ fun MainFileManagerScreen(
                                         androidx.compose.material3.LoadingIndicator(color = SleekFolderText)
                                         Spacer(Modifier.height(12.dp))
                                         Text("Loading directory...", color = SleekTextSub, style = MaterialTheme.typography.bodyMedium)
+                                    }
+                                } else if (currentDirectory.absolutePath.endsWith("Android/data", ignoreCase = true)) {
+                                    Column(
+                                        modifier = Modifier.fillMaxSize().padding(32.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = Arrangement.Center
+                                    ) {
+                                        Icon(
+                                            androidx.compose.material.icons.Icons.Default.Lock,
+                                            contentDescription = null,
+                                            tint = SleekTextAlt,
+                                            modifier = Modifier.size(64.dp)
+                                        )
+                                        Spacer(Modifier.height(16.dp))
+                                        Text("Access Denied", color = SleekTextMain, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                                        Spacer(Modifier.height(8.dp))
+                                        Text("Due to new system limitations, you cannot access this folder directly. Download Shizuku to view.", color = SleekTextSub, style = MaterialTheme.typography.bodyMedium, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                                     }
                                 } else if (filteredFiles.isEmpty()) {
                                     Column(
@@ -1386,6 +1411,7 @@ fun FileElementRow(
             ext in listOf("kt", "kts", "java", "js", "py", "css", "xml", "json", "md", "txt") -> Triple(SleekCodeBg, SleekCodeText, androidx.compose.material.icons.Icons.Default.IntegrationInstructions.let { androidx.compose.ui.graphics.vector.rememberVectorPainter(it) })
             ext in listOf("png", "jpg", "jpeg") -> Triple(SleekImageBg, SleekImageText, androidx.compose.material.icons.Icons.Default.Image.let { androidx.compose.ui.graphics.vector.rememberVectorPainter(it) })
             ext == "svg" -> Triple(SleekImageBg, SleekImageText, androidx.compose.material.icons.Icons.Default.Palette.let { androidx.compose.ui.graphics.vector.rememberVectorPainter(it) })
+            ext == "apk" -> Triple(SleekZipBg, SleekZipText, androidx.compose.ui.res.painterResource(com.example.R.drawable.ic_apk_custom))
             ext in listOf("zip", "mcpack", "mcworld", "mctemplate", "mcaddon") -> Triple(SleekZipBg, SleekZipText, androidx.compose.ui.res.painterResource(com.example.R.drawable.ic_minecraft_zip))
             ext in listOf("mp3", "wav", "m4a", "ogg", "flac", "mp4", "mkv") -> Triple(SleekAudioBg, SleekAudioText, androidx.compose.material.icons.Icons.Default.LibraryMusic.let { androidx.compose.ui.graphics.vector.rememberVectorPainter(it) })
             else -> Triple(SleekOtherBg, SleekOtherText, androidx.compose.material.icons.Icons.Default.InsertDriveFile.let { androidx.compose.ui.graphics.vector.rememberVectorPainter(it) })

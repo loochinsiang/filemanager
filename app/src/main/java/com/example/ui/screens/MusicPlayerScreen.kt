@@ -81,10 +81,18 @@ fun MusicPlayerScreen(
     var enableLimiter by remember { mutableStateOf(false) }
 
     val exoPlayer = remember {
-        ExoPlayer.Builder(context).build().apply {
-            setMediaItem(MediaItem.fromUri(Uri.fromFile(file)))
-            prepare()
-            playWhenReady = true
+        if (!isVideo) {
+            com.example.AudioPlayerManager.initialize(context)
+            if (com.example.AudioPlayerManager.currentFile.value?.absolutePath != file.absolutePath) {
+                com.example.AudioPlayerManager.playFile(file)
+            }
+            com.example.AudioPlayerManager.player!!
+        } else {
+            ExoPlayer.Builder(context).build().apply {
+                setMediaItem(MediaItem.fromUri(Uri.fromFile(file)))
+                prepare()
+                playWhenReady = true
+            }
         }
     }
     
@@ -161,7 +169,9 @@ fun MusicPlayerScreen(
         onDispose {
             try { reverbRef?.release() } catch (_: Exception) {}
             try { limiterRef?.release() } catch (_: Exception) {}
-            exoPlayer.release()
+            if (isVideo) {
+                exoPlayer.release()
+            }
         }
     }
 
