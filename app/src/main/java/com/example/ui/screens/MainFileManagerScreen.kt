@@ -354,7 +354,7 @@ fun MainFileManagerScreen(
                         ) {
                             Column {
                                 Text(
-                                    text = "Recent History",
+                                    text = androidx.compose.ui.res.stringResource(com.example.R.string.title_recent_history),
                                     style = MaterialTheme.typography.headlineMedium,
                                     fontWeight = FontWeight.Bold,
                                     color = SleekTextMain,
@@ -541,7 +541,7 @@ fun MainFileManagerScreen(
                                 onClick = { showPermissionExplainer = true },
                                 colors = ButtonDefaults.buttonColors(containerColor = SleekFolderBg, contentColor = SleekFolderText)
                             ) {
-                                Text("Configure Permission", fontWeight = FontWeight.Bold)
+                                Text(androidx.compose.ui.res.stringResource(com.example.R.string.btn_configure_perm), fontWeight = FontWeight.Bold)
                             }
                         }
                     } else {
@@ -735,7 +735,7 @@ fun MainFileManagerScreen(
                                             tint = SleekTextSub.copy(alpha = 0.4f)
                                         )
                                         Spacer(Modifier.height(12.dp))
-                                        Text("No matching files found here", color = SleekTextSub, style = MaterialTheme.typography.bodyMedium)
+                                        Text(androidx.compose.ui.res.stringResource(com.example.R.string.msg_no_matching_files), color = SleekTextSub, style = MaterialTheme.typography.bodyMedium)
                                     }
                                 } else {
                                     LazyColumn(
@@ -1048,12 +1048,12 @@ fun MainFileManagerScreen(
     if (showCreateDirDialog) {
         AlertDialog(
             onDismissRequest = { showCreateDirDialog = false },
-            title = { Text("Create Directory", color = SleekTextMain, fontWeight = FontWeight.Bold) },
+            title = { Text(androidx.compose.ui.res.stringResource(com.example.R.string.title_create_dir), color = SleekTextMain, fontWeight = FontWeight.Bold) },
             text = {
                 OutlinedTextField(
                     value = newItemName,
                     onValueChange = { newItemName = it },
-                    placeholder = { Text("Folder name ...", color = SleekTextSub) },
+                    placeholder = { Text(androidx.compose.ui.res.stringResource(com.example.R.string.folder_name_placeholder), color = SleekTextSub) },
                     singleLine = true,
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = SleekFolderText,
@@ -1085,7 +1085,7 @@ fun MainFileManagerScreen(
     if (showCreateFileDialog) {
         AlertDialog(
             onDismissRequest = { showCreateFileDialog = false },
-            title = { Text("Create Source File", color = SleekTextMain, fontWeight = FontWeight.Bold) },
+            title = { Text(androidx.compose.ui.res.stringResource(com.example.R.string.title_create_file), color = SleekTextMain, fontWeight = FontWeight.Bold) },
             text = {
                 OutlinedTextField(
                     value = newItemName,
@@ -1168,7 +1168,7 @@ fun MainFileManagerScreen(
         AlertDialog(
             onDismissRequest = { showDeleteConfirmDialog = null },
             title = { Text(androidx.compose.ui.res.stringResource(com.example.R.string.title_secure_delete), color = SleekTextMain, fontWeight = FontWeight.Bold) },
-            text = { Text("Are you completely sure you want to permanently erase: ${item.name}?", color = SleekTextAlt) },
+            text = { Text(androidx.compose.ui.res.stringResource(com.example.R.string.msg_delete_confirm, item.name), color = SleekTextAlt) },
             confirmButton = {
                 Button(
                     onClick = {
@@ -1193,19 +1193,19 @@ fun MainFileManagerScreen(
     showDetailsDialog?.let { item ->
         AlertDialog(
             onDismissRequest = { showDetailsDialog = null },
-            title = { Text("Document Properties", color = SleekTextMain, fontWeight = FontWeight.Bold) },
+            title = { Text(androidx.compose.ui.res.stringResource(com.example.R.string.title_doc_props), color = SleekTextMain, fontWeight = FontWeight.Bold) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Name: ${item.name}", fontWeight = FontWeight.Bold, color = SleekTextMain)
-                    Text("Absolute Path:", fontSize = 11.sp, color = SleekTextSub)
+                    Text(androidx.compose.ui.res.stringResource(com.example.R.string.label_name, item.name), fontWeight = FontWeight.Bold, color = SleekTextMain)
+                    Text(androidx.compose.ui.res.stringResource(com.example.R.string.label_absolute_path), fontSize = 11.sp, color = SleekTextSub)
                     Text(item.absolutePath, fontSize = 11.sp, fontFamily = FontFamily.Monospace, color = SleekTextAlt)
-                    Text("Type: ${if (item.isDirectory) "Directory Folder" else "Standard File"}", color = SleekTextAlt)
+                    Text(androidx.compose.ui.res.stringResource(com.example.R.string.label_type, if (item.isDirectory) androidx.compose.ui.res.stringResource(com.example.R.string.type_directory) else androidx.compose.ui.res.stringResource(com.example.R.string.type_file)), color = SleekTextAlt)
                     if (item.isFile) {
-                        Text("Size on storage: ${item.length() / 1024} KB (${item.length()} bytes)", color = SleekTextAlt)
+                        Text(androidx.compose.ui.res.stringResource(com.example.R.string.label_size_on_storage, item.length() / 1024, item.length()), color = SleekTextAlt)
                     }
                     val date = Date(item.lastModified())
                     val format = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
-                    Text("Last modified: ${format.format(date)}", color = SleekTextAlt)
+                    Text(androidx.compose.ui.res.stringResource(com.example.R.string.label_last_modified, format.format(date)), color = SleekTextAlt)
                 }
             },
             confirmButton = {
@@ -1222,7 +1222,7 @@ fun MainFileManagerScreen(
         AlertDialog(
             onDismissRequest = { binaryChoiceFile = null },
             icon = { Icon(Icons.Default.Info, contentDescription = null, tint = SleekFolderText) },
-            title = { Text("Unsupported / Binary File", fontWeight = FontWeight.Bold, color = SleekTextMain) },
+            title = { Text(androidx.compose.ui.res.stringResource(com.example.R.string.title_unsupported_binary), fontWeight = FontWeight.Bold, color = SleekTextMain) },
             text = {
                 Text(
                     "The file \"${targetFile.name}\" appears to contain binary data or uses an unsupported media format.\n\n" +
@@ -1269,7 +1269,7 @@ fun MainFileManagerScreen(
         AlertDialog(
             onDismissRequest = { largeFileWarningFile = null },
             icon = { Icon(Icons.Default.Warning, contentDescription = null, tint = SleekFolderText) },
-            title = { Text("Large File Warning", fontWeight = FontWeight.Bold, color = SleekTextMain) },
+            title = { Text(androidx.compose.ui.res.stringResource(com.example.R.string.title_large_file_warning), fontWeight = FontWeight.Bold, color = SleekTextMain) },
             text = {
                 val sizeOnMb = String.format("%.2f", targetFile.length().toFloat() / (1024 * 1024))
                 Text(
@@ -1316,7 +1316,7 @@ fun MainFileManagerScreen(
     if (showPermissionExplainer) {
         AlertDialog(
             onDismissRequest = { showPermissionExplainer = false },
-            title = { Text("Grant Storage Access", color = SleekTextMain, fontWeight = FontWeight.Bold) },
+            title = { Text(androidx.compose.ui.res.stringResource(com.example.R.string.title_grant_access), color = SleekTextMain, fontWeight = FontWeight.Bold) },
             text = {
                 Text(
                     text = "To browse and manage your actual device files directly from this manager, please grant storage permissions. You will be redirected to settings to allow All Files access.",

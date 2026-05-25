@@ -17,6 +17,7 @@
     <string name="title_zip_extractor">ZIP ARCHIVE EXTRACTOR</string>
     <string name="msg_loading_dir">Loading directory...</string>
     <string name="msg_empty_dir">Empty directory</string>
+    <string name="msg_no_matching_files">No matching files found here</string>
     <string name="msg_no_recent">No Recent History</string>
     <string name="msg_no_recent_desc">Files you open or view will appear here for fast access.</string>
     <string name="current_language">Current Language</string>
@@ -28,6 +29,38 @@
     <string name="menu_details">View Detailed Metadata</string>
     <string name="menu_hex">Inspect Raw HEX Bytes</string>
     <string name="menu_install_apk">Install APK Package</string>
+    <string name="title_recent_history">Recent History</string>
+    <string name="subtitle_image_quality">IMAGE QUALITY PROPERTIES</string>
+
+    <!-- Additional missing translations -->
+    <string name="btn_configure_perm">Configure Permission</string>
+    <string name="title_core_suites">Active Core Suites</string>
+    <string name="title_app_props">App Properties</string>
+    <string name="label_app_label">Application Label</string>
+    <string name="label_software_version">Software Version</string>
+    <string name="label_dev_storage_access">Dev Storage Access</string>
+    <string name="title_perf_cache">Performance &amp; Cache Controls</string>
+    <string name="btn_reset_prefs_cache">Reset App Preferences &amp; Cache</string>
+    <string name="menu_save_downloads">Download / Save to Downloads</string>
+    <string name="placeholder_file_name">util.kt / vector.svg ...</string>
+    <string name="msg_delete_confirm">Are you completely sure you want to permanently erase: %1$s?</string>
+    <string name="title_doc_props">Document Properties</string>
+    <string name="label_name">Name: %1$s</string>
+    <string name="label_absolute_path">Absolute Path:</string>
+    <string name="label_type">Type: %1$s</string>
+    <string name="label_size_on_storage">Size on storage: %1$d KB (%2$d bytes)</string>
+    <string name="label_last_modified">Last modified: %1$s</string>
+    <string name="title_unsupported_binary">Unsupported / Binary File</string>
+    <string name="btn_open_hex">Open in Hex Inspector</string>
+    <string name="btn_force_text">Force Open as Text</string>
+    <string name="title_large_file_warning">Large File Warning</string>
+    <string name="btn_use_hex">Use Hex Inspector</string>
+    <string name="title_grant_access">Grant Storage Access</string>
+    <string name="btn_allow_access">Allow Access</string>
+    <string name="type_directory">Directory</string>
+    <string name="type_file">File</string>
+    <string name="app_name_value">FileSmith Studio</string>
+    <string name="app_version_value">v1.3.1 - Expressive</string>
 
     <string name="header_explorer">Explorer</string>
     <string name="subtitle_in">In: %1$s</string>

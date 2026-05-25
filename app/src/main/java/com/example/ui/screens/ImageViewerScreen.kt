@@ -140,7 +140,7 @@ fun ImageViewerScreen(
                         .verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    Text("IMAGE QUALITY PROPERTIES", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = SleekFolderText)
+                    Text(androidx.compose.ui.res.stringResource(com.example.R.string.subtitle_image_quality), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = SleekFolderText)
                     
                     Row(
                         modifier = Modifier.fillMaxWidth(),
