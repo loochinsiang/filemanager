@@ -521,7 +521,7 @@ fun MainFileManagerScreen(
                             }
                         }
                     } else {
-                        Column(modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
+                        val viewHeader = @Composable {
                             OutlinedTextField(
                                 value = searchQuery,
                                 onValueChange = { searchQuery = it },
@@ -653,12 +653,13 @@ fun MainFileManagerScreen(
                             }
 
                             Spacer(modifier = Modifier.height(6.dp))
+                        }
 
+                        val viewContent = @Composable {
                             AnimatedContent(
                                 targetState = currentDirectory,
                                 modifier = Modifier
-                                    .fillMaxWidth()
-                                    .weight(1f),
+                                    .fillMaxSize(),
                                 transitionSpec = {
                                     if (targetState.path.length > initialState.path.length) {
                                         slideInHorizontally { width -> width / 3 } + fadeIn() togetherWith
@@ -719,6 +720,27 @@ fun MainFileManagerScreen(
                                         }
                                     }
                                 }
+                            }
+                        }
+
+                        if (isLandscape) {
+                            Row(modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
+                                Column(
+                                    modifier = Modifier
+                                        .weight(0.45f)
+                                        .padding(end = 16.dp)
+                                        .verticalScroll(rememberScrollState())
+                                ) {
+                                    viewHeader()
+                                }
+                                Box(modifier = Modifier.weight(0.55f)) {
+                                    viewContent()
+                                }
+                            }
+                        } else {
+                            Column(modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
+                                viewHeader()
+                                viewContent()
                             }
                         }
                     }
