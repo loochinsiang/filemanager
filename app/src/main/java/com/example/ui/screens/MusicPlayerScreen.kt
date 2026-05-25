@@ -52,6 +52,21 @@ fun MusicPlayerScreen(
     val orientation = LocalConfiguration.current.orientation
     val isLandscape = orientation == Configuration.ORIENTATION_LANDSCAPE
     
+    val parentFiles = remember(file) {
+        file.parentFile?.listFiles()?.filter { f -> 
+            f.isFile && (f.name.endsWith(".mp4", true) || f.name.endsWith(".mkv", true) || f.name.endsWith(".webm", true) || f.name.endsWith(".avi", true) || f.name.endsWith(".mov", true) || f.name.endsWith(".mp3", true) || f.name.endsWith(".wav", true) || f.name.endsWith(".ogg", true)) 
+        }?.sortedBy { it.name }
+    }
+    
+    val fileIndexTitle = remember(file, parentFiles) {
+        val index = parentFiles?.indexOfFirst { it.absolutePath == file.absolutePath } ?: -1
+        if (index != -1 && parentFiles != null) {
+            "${file.nameWithoutExtension} • ${index + 1}/${parentFiles.size}"
+        } else {
+            file.nameWithoutExtension
+        }
+    }
+    
     var isPlaying by remember { mutableStateOf(false) }
     var currentProgress by remember { mutableStateOf(0f) }
     var currentTimeLabel by remember { mutableStateOf("00:00") }
@@ -183,9 +198,7 @@ fun MusicPlayerScreen(
                         }
                     },
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .fillMaxHeight(0.6f) // Take up about 60% of the screen
-                        .align(Alignment.TopCenter)
+                        .fillMaxSize()
                         .clickable { showOverlay = !showOverlay }
                 )
 
@@ -221,7 +234,7 @@ fun MusicPlayerScreen(
                                     .padding(horizontal = 12.dp, vertical = 6.dp)
                             ) {
                                 Text(
-                                    "${file.nameWithoutExtension} • 29/238",
+                                    fileIndexTitle,
                                     color = Color.White,
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Medium
@@ -235,8 +248,7 @@ fun MusicPlayerScreen(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .fillMaxHeight(0.6f)
-                                .align(Alignment.TopCenter),
+                                .align(Alignment.Center),
                             horizontalArrangement = Arrangement.Center,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
@@ -258,7 +270,9 @@ fun MusicPlayerScreen(
                                     .background(Color(0x66000000), CircleShape)
                             ) {
                                 Icon(
-                                    if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                                    painter = androidx.compose.ui.res.painterResource(
+                                        id = if (isPlaying) com.example.R.drawable.ic_pause_custom else com.example.R.drawable.ic_play_custom
+                                    ),
                                     contentDescription = "Play/Pause",
                                     tint = Color.White,
                                     modifier = Modifier.size(36.dp)
@@ -299,28 +313,33 @@ fun MusicPlayerScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 val buttonBg = Color(0x33FFFFFF)
-                                IconButton(onClick = {}, modifier = Modifier.size(40.dp).background(buttonBg, CircleShape)) {
+                                val notImplemented = {
+                                    android.widget.Toast.makeText(context, "Not implemented yet", android.widget.Toast.LENGTH_SHORT).show()
+                                }
+
+                                IconButton(onClick = notImplemented, modifier = Modifier.size(40.dp).background(buttonBg, CircleShape)) {
                                     Icon(Icons.Default.ScreenRotation, contentDescription = "Rotate", tint = Color.White, modifier = Modifier.size(20.dp))
                                 }
-                                Box(modifier = Modifier.size(40.dp).background(buttonBg, CircleShape), contentAlignment = Alignment.Center) {
+                                Box(modifier = Modifier.size(40.dp).background(buttonBg, CircleShape).clickable { notImplemented() }, contentAlignment = Alignment.Center) {
                                     Text("SW", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                                 }
-                                IconButton(onClick = {}, modifier = Modifier.size(40.dp).background(buttonBg, CircleShape)) {
+                                IconButton(onClick = notImplemented, modifier = Modifier.size(40.dp).background(buttonBg, CircleShape)) {
                                     Icon(Icons.Default.MusicNote, contentDescription = "Audio", tint = Color.White, modifier = Modifier.size(20.dp))
                                 }
-                                IconButton(onClick = {}, modifier = Modifier.size(40.dp).background(buttonBg, CircleShape)) {
+                                IconButton(onClick = notImplemented, modifier = Modifier.size(40.dp).background(buttonBg, CircleShape)) {
                                     Icon(Icons.Default.Keyboard, contentDescription = "Keyboard", tint = Color.White, modifier = Modifier.size(20.dp))
                                 }
-                                IconButton(onClick = {}, modifier = Modifier.size(40.dp).background(buttonBg, CircleShape)) {
+                                IconButton(onClick = notImplemented, modifier = Modifier.size(40.dp).background(buttonBg, CircleShape)) {
                                     Icon(Icons.Default.Speed, contentDescription = "Speed", tint = Color.White, modifier = Modifier.size(20.dp))
                                 }
-                                IconButton(onClick = {}, modifier = Modifier.size(40.dp).background(buttonBg, CircleShape)) {
+                                IconButton(onClick = notImplemented, modifier = Modifier.size(40.dp).background(buttonBg, CircleShape)) {
                                     Icon(Icons.Default.Repeat, contentDescription = "Repeat", tint = Color.White, modifier = Modifier.size(20.dp))
                                 }
-                                IconButton(onClick = {}, modifier = Modifier.size(40.dp).background(buttonBg, CircleShape)) {
+                                IconButton(onClick = notImplemented, modifier = Modifier.size(40.dp).background(buttonBg, CircleShape)) {
                                     Icon(Icons.Default.Fullscreen, contentDescription = "Fullscreen", tint = Color.White, modifier = Modifier.size(20.dp))
                                 }
                             }
+
                             
                             Spacer(Modifier.height(32.dp))
                             
